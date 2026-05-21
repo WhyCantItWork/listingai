@@ -2,14 +2,20 @@ import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@supabase/supabase-js"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
+
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 // Use the service role key on the server so we can update profiles
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
 
 export async function POST(req: Request) {
   const body = await req.text()
@@ -21,7 +27,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    event = getStripe().webhooks.constructEvent(body, signature, webhookSecret)
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown"
     console.error("Webhook signature failed:", msg)
@@ -42,7 +48,7 @@ export async function POST(req: Request) {
         }
 
         // Determine tier from the subscription's price ID
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        const subscription = await getStripe().subscriptions.retrieve(subscriptionId)
         const priceId = subscription.items.data[0].price.id
         const tier =
         priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? "pro" :
@@ -50,8 +56,8 @@ export async function POST(req: Request) {
         priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ? "team" : "free"
 
 
-        await supabaseAdmin
-          .from("profiles")
+        await getSupabaseAdmin()
+        .from("profiles")
           .update({
             tier,
             stripe_customer_id: customerId,
@@ -66,8 +72,9 @@ export async function POST(req: Request) {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription
-        await supabaseAdmin
-          .from("profiles")
+        await getSupabaseAdmin()
+        .from("profiles")
+
           .update({ tier: "free", stripe_subscription_id: null })
           .eq("stripe_subscription_id", subscription.id)
 
@@ -84,8 +91,9 @@ export async function POST(req: Request) {
         priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ? "team" : "free"
 
 
-        await supabaseAdmin
+          await getSupabaseAdmin()
           .from("profiles")
+
           .update({ tier })
           .eq("stripe_subscription_id", subscription.id)
 
