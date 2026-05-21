@@ -1,129 +1,197 @@
-import Link from "next/link"
-import { Check, Sparkles, Building2, Users } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+'use client'
 
-const plans = [
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Check, Sparkles, Building2, Zap, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+
+type Tier = 'free' | 'pro' | 'lister' | 'team'
+
+interface Plan {
+  name: string
+  price: string
+  period: string
+  description: string
+  icon: typeof Sparkles
+  features: string[]
+  comingSoon?: string[]
+  notIncluded: string[]
+  cta: string
+  tier: Tier
+  highlighted: boolean
+  badge?: string
+}
+
+const plans: Plan[] = [
   {
-    name: "Free",
-    price: "£0",
-    period: "forever",
-    description: "Perfect for trying out ListingAI",
+    name: 'Free',
+    price: '£0',
+    period: 'forever',
+    description: 'Try out ListingAI risk-free',
     icon: Sparkles,
     features: [
-      "5 listings per month",
-      "Basic AI generation",
-      "Copy to clipboard",
-      "Standard tones",
-      "Community support",
+      '5 listings per month',
+      'Standard AI generation',
+      '3 basic tone presets',
+      'Copy to clipboard',
     ],
     notIncluded: [
-      "Vault storage",
-      "A/B testing",
-      "Compliance checker",
-      "Priority support",
+      'Vault storage',
+      'PDF export',
+      'A/B testing',
+      'Compliance checker',
+      'Length & audience options',
     ],
-    cta: "Get Started",
-    href: "/generator",
+    cta: 'Get started',
+    tier: 'free',
     highlighted: false,
   },
   {
-    name: "Pro",
-    price: "£29",
-    period: "per month",
-    description: "For busy estate agents",
+    name: 'Pro',
+    price: '£29',
+    period: 'per month',
+    description: 'For working estate agents',
     icon: Building2,
     features: [
-      "Unlimited listings",
-      "Advanced AI generation",
-      "All premium tones",
-      "Vault storage (unlimited)",
-      "A/B testing",
-      "Compliance checker",
-      "Priority email support",
-      "Export to PDF",
+      '100 listings per month (20× Free)',
+      'All 6 tone presets',
+      'Length options (Short/Medium/Long)',
+      'Audience targeting',
+      'PDF export',
+      'Vault storage (50 listings)',
+      'Email support',
     ],
-    notIncluded: [],
-    cta: "Start Free Trial",
-    href: "/generator",
-    highlighted: true,
-    badge: "Most Popular",
-  },
-  {
-    name: "Team",
-    price: "£99",
-    period: "per month",
-    description: "For agencies and teams",
-    icon: Users,
-    features: [
-      "Everything in Pro",
-      "Up to 10 team members",
-      "Team vault sharing",
-      "Brand voice training",
-      "Custom templates",
-      "Analytics dashboard",
-      "API access",
-      "Dedicated account manager",
-      "Phone support",
+    notIncluded: [
+      'Multiple variants at once',
+      'A/B testing sandbox',
+      'Compliance checker',
     ],
-    notIncluded: [],
-    cta: "Contact Sales",
-    href: "/generator",
+    cta: 'Subscribe to Pro',
+    tier: 'pro',
     highlighted: false,
   },
-]
-
-const faqs = [
   {
-    question: "Can I cancel my subscription anytime?",
-    answer:
-      "Yes, you can cancel your subscription at any time. Your access will continue until the end of your billing period.",
+    name: 'Lister',
+    price: '£59',
+    period: 'per month',
+    description: 'For power users running listings daily',
+    icon: Zap,
+    features: [
+      'Unlimited listings',
+      'Everything in Pro',
+      'Generate up to 3 variants at once',
+      'A/B testing sandbox',
+      'Compliance checker',
+      'Unlimited Vault storage',
+      'Priority email support',
+    ],
+    notIncluded: [],
+    cta: 'Subscribe to Lister',
+    tier: 'lister',
+    highlighted: true,
+    badge: 'Most Popular',
   },
   {
-    question: "Is there a free trial for paid plans?",
-    answer:
-      "Yes! Pro and Team plans come with a 14-day free trial. No credit card required to start.",
-  },
-  {
-    question: "What payment methods do you accept?",
-    answer:
-      "We accept all major credit and debit cards, as well as Direct Debit for annual subscriptions.",
-  },
-  {
-    question: "Can I upgrade or downgrade my plan?",
-    answer:
-      "Absolutely. You can change your plan at any time. Changes take effect immediately, with prorated billing.",
+    name: 'Team',
+    price: '£90',
+    period: 'per month',
+    description: 'For agencies and brokerages',
+    icon: Users,
+    features: [
+      'Everything in Lister',
+      'Priority email support',
+      'Early access to new features',
+    ],
+    comingSoon: [
+      'Multiple team member seats',
+      'Shared team Vault',
+      'Brand voice training',
+      'Custom templates',
+      'Analytics dashboard',
+      'API access',
+      'Dedicated account manager',
+    ],
+    notIncluded: [],
+    cta: 'Subscribe to Team',
+    tier: 'team',
+    highlighted: false,
   },
 ]
 
 export default function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null)
+  const router = useRouter()
+
+  const handleSubscribe = async (tier: Tier) => {
+    setLoading(tier)
+
+    if (tier === 'free') {
+      router.push('/generator')
+      return
+    }
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      router.push('/auth/signup')
+      return
+    }
+
+    const priceIdMap: Record<Exclude<Tier, 'free'>, string | undefined> = {
+      pro: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+      lister: process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID,
+      team: process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID,
+    }
+
+    const priceId = priceIdMap[tier]
+    if (!priceId) {
+      alert('Pricing not configured for this tier yet.')
+      setLoading(null)
+      return
+    }
+
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceId }),
+    })
+
+    const data = await res.json()
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      alert(data.error || 'Something went wrong')
+      setLoading(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="mx-auto max-w-2xl text-center">
         <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Simple, transparent pricing
         </h1>
         <p className="mt-4 text-pretty text-lg text-muted-foreground">
-          Choose the plan that works best for you. All plans include access to our
-          core AI generation features.
+          Start free. Upgrade when you outgrow it. Cancel anytime.
         </p>
       </div>
 
-      {/* Pricing Cards */}
-      <div className="mx-auto mt-16 grid max-w-5xl gap-8 lg:grid-cols-3">
+      <div className="mx-auto mt-16 grid max-w-6xl gap-6 lg:grid-cols-4">
         {plans.map((plan) => (
           <Card
             key={plan.name}
             className={cn(
-              "relative flex flex-col border-border bg-card",
-              plan.highlighted && "border-2 border-primary shadow-lg"
+              'relative flex flex-col border-border bg-card',
+              plan.highlighted && 'border-2 border-primary shadow-lg lg:scale-105'
             )}
           >
             {plan.badge && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground">
+                <span className="rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground whitespace-nowrap">
                   {plan.badge}
                 </span>
               </div>
@@ -133,25 +201,30 @@ export default function PricingPage() {
                 <plan.icon className="h-6 w-6 text-primary" />
               </div>
               <CardTitle className="text-xl text-foreground">{plan.name}</CardTitle>
-              <CardDescription>{plan.description}</CardDescription>
+              <CardDescription className="min-h-[40px]">{plan.description}</CardDescription>
               <div className="mt-4">
                 <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                <span className="text-muted-foreground">/{plan.period}</span>
+                <span className="text-muted-foreground text-sm"> /{plan.period}</span>
               </div>
             </CardHeader>
             <CardContent className="flex-1">
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
+                  <li key={feature} className="flex items-start gap-2.5">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span className="text-sm text-foreground">{feature}</span>
                   </li>
                 ))}
+                {plan.comingSoon?.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 inline-flex h-4 items-center rounded bg-amber-500/20 px-1.5 text-[10px] font-bold uppercase text-amber-600 shrink-0">
+                      Soon
+                    </span>
+                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  </li>
+                ))}
                 {plan.notIncluded.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-3 text-muted-foreground/50"
-                  >
+                  <li key={feature} className="flex items-start gap-2.5 text-muted-foreground/50">
                     <span className="mt-0.5 h-4 w-4 shrink-0 text-center">—</span>
                     <span className="text-sm line-through">{feature}</span>
                   </li>
@@ -160,49 +233,21 @@ export default function PricingPage() {
             </CardContent>
             <CardFooter>
               <Button
-                asChild
+                onClick={() => handleSubscribe(plan.tier)}
+                disabled={loading === plan.tier}
                 className="w-full"
-                variant={plan.highlighted ? "default" : "outline"}
+                variant={plan.highlighted ? 'default' : 'outline'}
               >
-                <Link href={plan.href}>{plan.cta}</Link>
+                {loading === plan.tier ? 'Loading...' : plan.cta}
               </Button>
             </CardFooter>
           </Card>
         ))}
       </div>
 
-      {/* FAQ Section */}
-      <div className="mx-auto mt-24 max-w-3xl">
-        <h2 className="text-center text-2xl font-bold text-foreground">
-          Frequently Asked Questions
-        </h2>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          {faqs.map((faq) => (
-            <Card key={faq.question} className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="text-base text-foreground">{faq.question}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{faq.answer}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div className="mx-auto mt-24 max-w-2xl text-center">
-        <h2 className="text-2xl font-bold text-foreground">
-          Ready to write better listings?
-        </h2>
-        <p className="mt-2 text-muted-foreground">
-          Start your free trial today. No credit card required.
-        </p>
-        <div className="mt-6">
-          <Button asChild size="lg">
-            <Link href="/generator">Get Started Free</Link>
-          </Button>
-        </div>
+      <div className="mx-auto mt-16 max-w-2xl text-center text-sm text-muted-foreground">
+        <p>All paid plans are billed monthly. Cancel anytime — no questions asked.</p>
+        <p className="mt-1">Test mode active — use card <code className="bg-muted px-1.5 py-0.5 rounded text-xs">4242 4242 4242 4242</code> to try it out.</p>
       </div>
     </div>
   )

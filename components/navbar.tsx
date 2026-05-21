@@ -1,18 +1,22 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Home, Sparkles, Archive, Split, Shield, CreditCard, Sun, Moon, Crown, Zap, Menu, X } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Home, Sparkles, Archive, Split, Shield, CreditCard, Sun, Moon, Crown, Zap, Menu, X, User, LogOut } from "lucide-react"
 import { useTheme, type Theme } from "@/lib/theme-context"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -32,10 +36,35 @@ const themeOptions: { value: Theme; label: string; icon: React.ElementType }[] =
 
 export function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
 
   const CurrentThemeIcon = themeOptions.find((t) => t.value === theme)?.icon ?? Sun
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      setAuthLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/")
+    router.refresh()
+  }
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -71,8 +100,9 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Theme Switcher & Mobile Menu */}
+          {/* Right side: theme + account + mobile menu */}
           <div className="flex items-center gap-2">
+            {/* Theme switcher */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9">
@@ -97,7 +127,49 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Mobile Menu Button */}
+            {/* Account / Auth */}
+            {!authLoading && (
+              user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9">
+                      <User className="h-4 w-4" />
+                      <span className="sr-only">Account</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-xs font-medium leading-none">Signed in as</p>
+                        <p className="text-xs leading-none text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push("/account")} className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Account
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-rose-500">
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="hidden sm:flex items-center gap-2">
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/auth/login">Log in</Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href="/auth/signup">Sign up</Link>
+                  </Button>
+                </div>
+              )
+            )}
+
+            {/* Mobile menu button */}
             <Button
               variant="outline"
               size="icon"
@@ -133,6 +205,18 @@ export function Navbar() {
                   </Link>
                 )
               })}
+
+              {/* Mobile auth links */}
+              {!user && (
+                <div className="flex flex-col gap-1 pt-2 mt-2 border-t border-border">
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">
+                    Log in
+                  </Link>
+                  <Link href="/auth/signup" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-primary text-primary-foreground">
+                    Sign up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}
