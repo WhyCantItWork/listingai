@@ -87,6 +87,11 @@ function AccountPageContent() {
   const [deleteConfirm, setDeleteConfirm] = useState("")
   const [deleting, setDeleting] = useState(false)
 
+    // Delete account state
+  const [deleteConfirm, setDeleteConfirm] = useState("")
+  const [deleting, setDeleting] = useState(false)
+
+
 
   // Change email state
   const [newEmail, setNewEmail] = useState("")
@@ -213,6 +218,29 @@ const handleDeleteAccount = async () => {
     })
     setNewEmail("")
     setEmailLoading(false)
+  }
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") {
+      toast.error("Type DELETE in capital letters to confirm")
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error("Couldn't delete account", { description: data.error || "Please try again or contact support." })
+        setDeleting(false)
+        return
+      }
+      toast.success("Account deleted", { description: "Your account and all data have been removed." })
+      window.location.href = "/"
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      toast.error("Couldn't delete account", { description: msg })
+      setDeleting(false)
+    }
   }
 
   const handleLogout = async () => {
