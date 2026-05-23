@@ -663,4 +663,13 @@ function AccountPageContent() {
 export default function AccountPage() {
   return (
     <Suspense fallback={
-      <div className="mx-auto max-w-2xl px
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
+        Loading account...
+      </div>
+    }>
+      <AccountPageContent />
+    </Suspense>
+  )
+}
+
+
