@@ -1,6 +1,6 @@
 'use client'
 import { toast } from "sonner"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -56,7 +56,7 @@ const VAULT_TOPUPS = [
   },
 ]
 
-export default function AccountPage() {
+function AccountPageContent() {
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -684,5 +684,16 @@ const vaultRemaining = totalVaultCap === null ? null : Math.max(0, totalVaultCap
         </CardContent>
       </Card>
     </div>
+  )
+}
+export default function AccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
+        Loading account...
+      </div>
+    }>
+      <AccountPageContent />
+    </Suspense>
   )
 }
