@@ -1,15 +1,14 @@
 'use client'
+
 import { toast } from "sonner"
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Crown, CreditCard, LogOut, Plus, Sparkles, CheckCircle2, X, Clock, TrendingUp, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Crown, CreditCard, LogOut, Plus, Sparkles, CheckCircle2, X, Clock, TrendingUp, Mail } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-
 
 type Tier = "free" | "pro" | "lister" | "team"
 
@@ -25,6 +24,13 @@ interface Profile {
 const TIER_LIMITS: Record<Tier, number | null> = {
   free: 5,
   pro: 100,
+  lister: null,
+  team: null,
+}
+
+const VAULT_CAPS: Record<Tier, number | null> = {
+  free: 0,
+  pro: 50,
   lister: null,
   team: null,
 }
@@ -65,17 +71,10 @@ function AccountPageContent() {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false)
   const [showCancelBanner, setShowCancelBanner] = useState(false)
   const [vaultUsed, setVaultUsed] = useState(0)
-  // Change email state
-const [newEmail, setNewEmail] = useState("")
-const [emailLoading, setEmailLoading] = useState(false)
 
-// Change password state
-const [currentPassword, setCurrentPassword] = useState("")
-const [newPassword, setNewPassword] = useState("")
-const [confirmPassword, setConfirmPassword] = useState("")
-const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-const [showNewPassword, setShowNewPassword] = useState(false)
-const [passwordLoading, setPasswordLoading] = useState(false)
+  // Change email state
+  const [newEmail, setNewEmail] = useState("")
+  const [emailLoading, setEmailLoading] = useState(false)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -84,20 +83,6 @@ const [passwordLoading, setPasswordLoading] = useState(false)
     if (searchParams.get("topup") === "success") setShowSuccessBanner(true)
     if (searchParams.get("topup") === "cancelled") setShowCancelBanner(true)
   }, [searchParams])
-useEffect(() => {
-  const loadVaultCount = async () => {
-    try {
-      const res = await fetch("/api/vault")
-      if (res.ok) {
-        const data = await res.json()
-        setVaultUsed((data.listings || []).length)
-      }
-    } catch {
-      setVaultUsed(0)
-    }
-  }
-  loadVaultCount()
-}, [])
 
   useEffect(() => {
     const load = async () => {
@@ -119,6 +104,21 @@ useEffect(() => {
     load()
   }, [router])
 
+  useEffect(() => {
+    const loadVaultCount = async () => {
+      try {
+        const res = await fetch("/api/vault")
+        if (res.ok) {
+          const data = await res.json()
+          setVaultUsed((data.listings || []).length)
+        }
+      } catch {
+        setVaultUsed(0)
+      }
+    }
+    loadVaultCount()
+  }, [])
+
   const handleManageSubscription = async () => {
     setPortalLoading(true)
     const res = await fetch("/api/stripe/portal", { method: "POST" })
@@ -126,92 +126,10 @@ useEffect(() => {
     if (data.url) {
       window.location.href = data.url
     } else {
-      alert(data.error || "Couldn't open billing portal")
+      toast.error("Couldn't open billing portal", { description: data.error })
       setPortalLoading(false)
     }
   }
-const handleChangeEmail = async () => {
-  if (!newEmail || !newEmail.includes("@")) {
-    toast.error("Please enter a valid email address")
-    return
-  }
-  if (newEmail === user?.email) {
-    toast.error("That's already your email")
-    return
-  }
-
-  setEmailLoading(true)
-  const supabase = createClient()
-  const { error } = await supabase.auth.updateUser({ email: newEmail })
-
-  if (error) {
-    toast.error("Couldn't change email", { description: error.message })
-    setEmailLoading(false)
-    return
-  }
-
-  toast.success("Confirmation sent", {
-    description: `Check ${newEmail} and click the confirmation link to finish the change.`,
-    duration: 8000,
-  })
-  setNewEmail("")
-  setEmailLoading(false)
-}
-
-const handleChangePassword = async () => {
-  if (!currentPassword) {
-    toast.error("Enter your current password")
-    return
-  }
-  if (newPassword.length < 8) {
-    toast.error("New password must be at least 8 characters")
-    return
-  }
-  if (newPassword !== confirmPassword) {
-    toast.error("New passwords don't match")
-    return
-  }
-  if (newPassword === currentPassword) {
-    toast.error("New password must be different from your current one")
-    return
-  }
-
-  setPasswordLoading(true)
-  const supabase = createClient()
-
-  // First verify the current password by attempting a re-login
-  if (!user?.email) {
-    toast.error("Couldn't verify your account")
-    setPasswordLoading(false)
-    return
-  }
-
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: user.email,
-    password: currentPassword,
-  })
-
-  if (signInError) {
-    toast.error("Current password is incorrect")
-    setPasswordLoading(false)
-    return
-  }
-
-  // Now update the password
-  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
-
-  if (updateError) {
-    toast.error("Couldn't change password", { description: updateError.message })
-    setPasswordLoading(false)
-    return
-  }
-
-  toast.success("Password changed", { description: "Use your new password next time you log in." })
-  setCurrentPassword("")
-  setNewPassword("")
-  setConfirmPassword("")
-  setPasswordLoading(false)
-}
 
   const handleTopUp = async (topupId: string) => {
     setTopupLoading(topupId)
@@ -224,9 +142,37 @@ const handleChangePassword = async () => {
     if (data.url) {
       window.location.href = data.url
     } else {
-      alert(data.error || "Couldn't start checkout")
+      toast.error("Couldn't start checkout", { description: data.error })
       setTopupLoading(null)
     }
+  }
+
+  const handleChangeEmail = async () => {
+    if (!newEmail || !newEmail.includes("@")) {
+      toast.error("Please enter a valid email address")
+      return
+    }
+    if (newEmail === user?.email) {
+      toast.error("That's already your email")
+      return
+    }
+
+    setEmailLoading(true)
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ email: newEmail })
+
+    if (error) {
+      toast.error("Couldn't change email", { description: error.message })
+      setEmailLoading(false)
+      return
+    }
+
+    toast.success("Confirmation sent", {
+      description: `Check ${newEmail} and click the confirmation link to finish the change.`,
+      duration: 8000,
+    })
+    setNewEmail("")
+    setEmailLoading(false)
   }
 
   const handleLogout = async () => {
@@ -247,16 +193,8 @@ const handleChangePassword = async () => {
   const tier = profile?.tier ?? "free"
   const baseLimit = TIER_LIMITS[tier]
   const listingsUsed = profile?.listings_used ?? 0
-  const VAULT_CAPS: Record<Tier, number | null> = {
-  free: 0,
-  pro: 50,
-  lister: null,
-  team: null,
-}
-const baseVaultCap = VAULT_CAPS[tier]
+  const baseVaultCap = VAULT_CAPS[tier]
 
-
-  // Active bonus check (only count if not expired)
   const now = new Date()
   const bonusListingsValid =
     profile?.bonus_listings_expires_at && new Date(profile.bonus_listings_expires_at) > now
@@ -268,13 +206,12 @@ const baseVaultCap = VAULT_CAPS[tier]
 
   const totalLimit = baseLimit === null ? null : baseLimit + bonusListingsValid
   const remaining = totalLimit === null ? null : Math.max(0, totalLimit - listingsUsed)
-  const bonusVaultValid =
-  profile?.bonus_vault_expires_at && new Date(profile.bonus_vault_expires_at) > now
-    ? profile.bonus_vault_slots ?? 0
-    : 0
-const totalVaultCap = baseVaultCap === null ? null : baseVaultCap + bonusVaultValid
-const vaultRemaining = totalVaultCap === null ? null : Math.max(0, totalVaultCap - vaultUsed)
 
+  const bonusVaultValid =
+    profile?.bonus_vault_expires_at && new Date(profile.bonus_vault_expires_at) > now
+      ? profile.bonus_vault_slots ?? 0
+      : 0
+  const totalVaultCap = baseVaultCap === null ? null : baseVaultCap + bonusVaultValid
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 space-y-6">
@@ -357,58 +294,59 @@ const vaultRemaining = totalVaultCap === null ? null : Math.max(0, totalVaultCap
                 />
               </div>
             )}
+
             <div className="flex justify-between text-sm pt-2">
-  <span className="text-muted-foreground">Vault storage used</span>
-  <span className="font-medium text-foreground">
-    {vaultUsed} {totalVaultCap === null ? "(unlimited)" : `/ ${totalVaultCap}`}
-  </span>
-</div>
-{totalVaultCap !== null && (
-  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-    <div
-      className="h-full bg-primary transition-all"
-      style={{ width: `${Math.min(100, (vaultUsed / totalVaultCap) * 100)}%` }}
-    />
-  </div>
-)}
+              <span className="text-muted-foreground">Vault storage used</span>
+              <span className="font-medium text-foreground">
+                {vaultUsed} {totalVaultCap === null ? "(unlimited)" : `/ ${totalVaultCap}`}
+              </span>
+            </div>
+            {totalVaultCap !== null && (
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, (vaultUsed / totalVaultCap) * 100)}%` }}
+                />
+              </div>
+            )}
 
             {bonusListingsValid > 0 && (
-  <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-    <div className="flex items-start gap-2">
-      <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-      <div className="flex-1">
-        <p className="font-medium text-foreground">+{bonusListingsValid} bonus listings active</p>
-        <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Expires in {bonusListingsExpiresIn} day{bonusListingsExpiresIn !== 1 ? "s" : ""}
-        </p>
-      </div>
-    </div>
-  </div>
-)}
+              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">+{bonusListingsValid} bonus listings active</p>
+                    <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Expires in {bonusListingsExpiresIn} day{bonusListingsExpiresIn !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-{(() => {
-  const vaultExpiresAt = profile?.bonus_vault_expires_at ? new Date(profile.bonus_vault_expires_at) : null
-  const vaultValid = vaultExpiresAt && vaultExpiresAt > now ? profile?.bonus_vault_slots ?? 0 : 0
-  const vaultExpiresIn = vaultExpiresAt
-    ? Math.max(0, Math.ceil((vaultExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-    : 0
-  if (vaultValid === 0) return null
-  return (
-    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-      <div className="flex items-start gap-2">
-        <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <p className="font-medium text-foreground">+{vaultValid} bonus vault slots active</p>
-          <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Expires in {vaultExpiresIn} day{vaultExpiresIn !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-})()}
+            {(() => {
+              const vaultExpiresAt = profile?.bonus_vault_expires_at ? new Date(profile.bonus_vault_expires_at) : null
+              const vaultValid = vaultExpiresAt && vaultExpiresAt > now ? profile?.bonus_vault_slots ?? 0 : 0
+              const vaultExpiresIn = vaultExpiresAt
+                ? Math.max(0, Math.ceil((vaultExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+                : 0
+              if (vaultValid === 0) return null
+              return (
+                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">+{vaultValid} bonus vault slots active</p>
+                      <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Expires in {vaultExpiresIn} day{vaultExpiresIn !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {totalLimit !== null && remaining !== null && remaining < 10 && remaining > 0 && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -532,111 +470,39 @@ const vaultRemaining = totalVaultCap === null ? null : Math.max(0, totalVaultCap
           </CardContent>
         </Card>
       )}
-{/* Change Email */}
-<Card>
-  <CardHeader>
-    <CardTitle className="text-lg flex items-center gap-2">
-      <Mail className="h-5 w-5 text-primary" />
-      Change email
-    </CardTitle>
-    <CardDescription>
-      You'll receive a confirmation link at the new address. The change takes effect once you click it.
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="space-y-2">
-      <Label htmlFor="newEmail" className="text-sm">New email address</Label>
-      <Input
-        id="newEmail"
-        type="email"
-        placeholder="you@newaddress.com"
-        value={newEmail}
-        onChange={(e) => setNewEmail(e.target.value)}
-        disabled={emailLoading}
-      />
-    </div>
-    <Button
-      onClick={handleChangeEmail}
-      disabled={emailLoading || !newEmail}
-      className="w-full sm:w-auto"
-    >
-      {emailLoading ? "Sending..." : "Send confirmation"}
-    </Button>
-  </CardContent>
-</Card>
 
-{/* Change Password */}
-<Card>
-  <CardHeader>
-    <CardTitle className="text-lg flex items-center gap-2">
-      <Lock className="h-5 w-5 text-primary" />
-      Change password
-    </CardTitle>
-    <CardDescription>
-      Pick a new password — at least 8 characters. You'll stay logged in.
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="space-y-2">
-      <Label htmlFor="currentPassword" className="text-sm">Current password</Label>
-      <div className="relative">
-        <Input
-          id="currentPassword"
-          type={showCurrentPassword ? "text" : "password"}
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          disabled={passwordLoading}
-        />
-        <button
-          type="button"
-          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          tabIndex={-1}
-        >
-          {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
-    <div className="space-y-2">
-      <Label htmlFor="newPassword" className="text-sm">New password</Label>
-      <div className="relative">
-        <Input
-          id="newPassword"
-          type={showNewPassword ? "text" : "password"}
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          disabled={passwordLoading}
-          placeholder="At least 8 characters"
-        />
-        <button
-          type="button"
-          onClick={() => setShowNewPassword(!showNewPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          tabIndex={-1}
-        >
-          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
-    <div className="space-y-2">
-      <Label htmlFor="confirmPassword" className="text-sm">Confirm new password</Label>
-      <Input
-        id="confirmPassword"
-        type={showNewPassword ? "text" : "password"}
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        disabled={passwordLoading}
-      />
-    </div>
-    <Button
-      onClick={handleChangePassword}
-      disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-      className="w-full sm:w-auto"
-    >
-      {passwordLoading ? "Changing..." : "Change password"}
-    </Button>
-  </CardContent>
-</Card>
+      {/* Change Email */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Change email
+          </CardTitle>
+          <CardDescription>
+            You'll receive a confirmation link at the new address. The change takes effect once you click it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newEmail" className="text-sm">New email address</Label>
+            <Input
+              id="newEmail"
+              type="email"
+              placeholder="you@newaddress.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              disabled={emailLoading}
+            />
+          </div>
+          <Button
+            onClick={handleChangeEmail}
+            disabled={emailLoading || !newEmail}
+            className="w-full sm:w-auto"
+          >
+            {emailLoading ? "Sending..." : "Send confirmation"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Subscription management */}
       <Card>
@@ -686,6 +552,7 @@ const vaultRemaining = totalVaultCap === null ? null : Math.max(0, totalVaultCap
     </div>
   )
 }
+
 export default function AccountPage() {
   return (
     <Suspense fallback={

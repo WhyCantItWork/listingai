@@ -1,88 +1,131 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from "react"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Mail, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address.")
+      return
+    }
     setLoading(true)
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error: authError } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        shouldCreateUser: false, // login only — don't create new accounts
+      },
+    })
 
-    if (error) {
-      setError(error.message)
+    if (authError) {
+      // If user doesn't exist, give a helpful message rather than the raw error
+      if (authError.message.toLowerCase().includes("not found") || authError.message.toLowerCase().includes("signups not allowed")) {
+        setError("No account found with that email. Sign up first.")
+      } else {
+        setError(authError.message)
+      }
       setLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
+      return
     }
+
+    setSent(true)
+    setLoading(false)
+  }
+
+  if (sent) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardDescription>
+              We've sent a magic link to <strong>{email}</strong>. Click it to sign in — no password needed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground text-center">
+            <p>The link expires in 1 hour.</p>
+            <p>
+              Didn't get it?{" "}
+              <button onClick={() => setSent(false)} className="text-primary underline">
+                Try again
+              </button>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-4">
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="text-sm opacity-70">Log in to your Tenancy account.</p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase opacity-70">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white"
-              placeholder="you@example.com"
-            />
+    <div className="mx-auto max-w-md px-4 py-16">
+      <Card>
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Sparkles className="h-6 w-6 text-primary" />
           </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase opacity-70">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white"
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-500/30 text-rose-300 text-sm">
-              {error}
+          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardDescription>
+            Enter your email and we'll send you a sign-in link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                Email address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.co.uk"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
+                autoComplete="email"
+                autoFocus
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 font-bold disabled:opacity-50"
-          >
-            {loading ? 'Logging in...' : 'Log in'}
-          </button>
-        </form>
+            {error && (
+              <p className="text-sm text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-md p-3">
+                {error}
+              </p>
+            )}
 
-        <div className="text-center text-sm opacity-70">
-          Don't have an account?{' '}
-          <Link href="/auth/signup" className="text-violet-400 hover:underline">
-            Sign up
-          </Link>
-        </div>
-      </div>
+            <Button type="submit" disabled={loading || !email} className="w-full" size="lg">
+              {loading ? "Sending magic link..." : <>Send magic link <ArrowRight className="ml-2 h-4 w-4" /></>}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            New to Tenancy?{" "}
+            <Link href="/auth/signup" className="text-primary underline">
+              Create an account
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
