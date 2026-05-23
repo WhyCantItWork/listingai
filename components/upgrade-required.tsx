@@ -16,7 +16,7 @@ export function UpgradeRequired({ feature, requiredTier = "Pro" }: { feature: st
               {feature} requires {requiredTier}
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Upgrade to {requiredTier} to unlock {feature.toLowerCase()} and the rest of {requiredTier === "Lister" ? "the power-user toolkit" : "ListingAI"}.
+              Upgrade to {requiredTier} to unlock {feature.toLowerCase()} and the rest of {requiredTier === "Lister" ? "the power-user toolkit" : "Tenancy"}.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

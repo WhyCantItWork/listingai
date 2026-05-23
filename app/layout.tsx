@@ -4,17 +4,18 @@ import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/lib/theme-context"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
-  title: "ListingAI - Write Better Property Listings in Seconds",
+  title: "Tenancy - Write Better Property Listings in Seconds",
   description:
     "AI-powered property listing descriptions for estate agents. Generate compelling, compliant listings in seconds, not minutes.",
   keywords: ["property listings", "estate agent", "AI", "real estate", "listing generator"],
-  authors: [{ name: "ListingAI" }],
+  authors: [{ name: "Tenancy" }],
 }
 
 export const viewport: Viewport = {
@@ -37,13 +38,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider>
-<div className="flex min-h-screen flex-col">
-  <Navbar />
-  <main className="flex-1">{children}</main>
-  <Footer />
-</div>
-
+          <div className="flex min-h-screen flex-col">
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
         </ThemeProvider>
+        <Toaster richColors position="top-right" />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>

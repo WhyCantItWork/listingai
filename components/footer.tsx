@@ -10,7 +10,7 @@ export function Footer() {
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-foreground">ListingAI</span>
+            <span className="font-bold text-foreground">Tenancy</span>
             <span className="text-xs text-muted-foreground ml-2">
               AI listing copy for UK estate agents
             </span>
@@ -36,7 +36,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} ListingAI. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Tenancy. All rights reserved.</p>
         </div>
       </div>
     </footer>

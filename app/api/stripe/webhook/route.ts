@@ -8,14 +8,12 @@ function getStripe() {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
-// Use the service role key on the server so we can update profiles
 function getSupabaseAdmin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
-
 
 export async function POST(req: Request) {
   const body = await req.text()
@@ -39,25 +37,86 @@ export async function POST(req: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
         const userId = session.client_reference_id || session.metadata?.userId
-        const customerId = session.customer as string
-        const subscriptionId = session.subscription as string
 
         if (!userId) {
           console.error("No userId in session")
           break
         }
 
-        // Determine tier from the subscription's price ID
+        // BRANCH 1: top-up (one-off payment)
+        if (session.mode === "payment") {
+          const topupType = session.metadata?.topupType
+          const topupAmount = parseInt(session.metadata?.topupAmount || "0", 10)
+
+          if (!topupType || !topupAmount) {
+            console.error("Top-up missing metadata", session.metadata)
+            break
+          }
+
+          const { data: profile } = await getSupabaseAdmin()
+            .from("profiles")
+            .select("bonus_listings, bonus_listings_expires_at, bonus_vault_slots, bonus_vault_expires_at")
+            .eq("id", userId)
+            .single()
+
+          const now = new Date()
+          const newExpiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+          if (topupType === "listings") {
+            const existingExpiry = profile?.bonus_listings_expires_at
+              ? new Date(profile.bonus_listings_expires_at)
+              : null
+            const stillValid = existingExpiry && existingExpiry > now
+            const existingBonus = stillValid ? (profile?.bonus_listings || 0) : 0
+
+            await getSupabaseAdmin()
+              .from("profiles")
+              .update({
+                bonus_listings: existingBonus + topupAmount,
+                bonus_listings_expires_at: newExpiry.toISOString(),
+              })
+              .eq("id", userId)
+
+            console.log(`User ${userId} bought +${topupAmount} listings. New total: ${existingBonus + topupAmount}, expires ${newExpiry.toISOString()}`)
+          }
+
+          if (topupType === "vault") {
+            const existingExpiry = profile?.bonus_vault_expires_at
+              ? new Date(profile.bonus_vault_expires_at)
+              : null
+            const stillValid = existingExpiry && existingExpiry > now
+            const existingBonus = stillValid ? (profile?.bonus_vault_slots || 0) : 0
+
+            await getSupabaseAdmin()
+              .from("profiles")
+              .update({
+                bonus_vault_slots: existingBonus + topupAmount,
+                bonus_vault_expires_at: newExpiry.toISOString(),
+              })
+              .eq("id", userId)
+
+            console.log(`User ${userId} bought +${topupAmount} vault slots. New total: ${existingBonus + topupAmount}`)
+          }
+
+          break
+        }
+
+        // BRANCH 2: subscription
+        const customerId = session.customer as string
+        const subscriptionId = session.subscription as string
+
         const subscription = await getStripe().subscriptions.retrieve(subscriptionId)
         const priceId = subscription.items.data[0].price.id
         const tier =
-        priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? "pro" :
-        priceId === process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID ? "lister" :
-        priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ? "team" : "free"
-
+          priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? "pro" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID ? "pro" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID ? "lister" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_LISTER_YEARLY_PRICE_ID ? "lister" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ? "team" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID ? "team" : "free"
 
         await getSupabaseAdmin()
-        .from("profiles")
+          .from("profiles")
           .update({
             tier,
             stripe_customer_id: customerId,
@@ -67,17 +126,16 @@ export async function POST(req: Request) {
           })
           .eq("id", userId)
 
+        console.log(`User ${userId} upgraded to ${tier}`)
         break
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription
         await getSupabaseAdmin()
-        .from("profiles")
-
+          .from("profiles")
           .update({ tier: "free", stripe_subscription_id: null })
           .eq("stripe_subscription_id", subscription.id)
-
         console.log(`Subscription ${subscription.id} cancelled, user reverted to free`)
         break
       }
@@ -86,14 +144,15 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription
         const priceId = subscription.items.data[0].price.id
         const tier =
-        priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? "pro" :
-        priceId === process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID ? "lister" :
-        priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ? "team" : "free"
+          priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? "pro" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID ? "pro" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID ? "lister" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_LISTER_YEARLY_PRICE_ID ? "lister" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID ? "team" :
+          priceId === process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID ? "team" : "free"
 
-
-          await getSupabaseAdmin()
+        await getSupabaseAdmin()
           .from("profiles")
-
           .update({ tier })
           .eq("stripe_subscription_id", subscription.id)
 

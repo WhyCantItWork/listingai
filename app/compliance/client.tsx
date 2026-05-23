@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Shield, AlertTriangle, Check, RefreshCw, Sparkles, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,6 +21,14 @@ export function ComplianceClient() {
   const [findings, setFindings] = useState<Finding[] | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+  const pending = localStorage.getItem("tenancy-pending-compliance")
+  if (pending) {
+    setText(pending)
+    localStorage.removeItem("tenancy-pending-compliance")
+  }
+}, [])
+
 
   const runCheck = async () => {
     if (text.trim().length < 20) {
@@ -55,12 +63,17 @@ export function ComplianceClient() {
   }
 
   const handleReplace = (finding: Finding) => {
-    // Case-insensitive first occurrence replacement
     const idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
     if (idx === -1) return
+
+    const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
+    const replacement = isRemoval ? "" : finding.alternative
+
     const before = text.slice(0, idx)
     const after = text.slice(idx + finding.phrase.length)
-    const newText = before + finding.alternative + after
+
+    const newText = (before + replacement + after).replace(/  +/g, " ")
+
     setText(newText)
     setFindings((prev) => prev?.filter((f) => f !== finding) ?? null)
   }
@@ -70,10 +83,12 @@ export function ComplianceClient() {
     let newText = text
     findings.forEach((f) => {
       const idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
-      if (idx !== -1) {
-        newText = newText.slice(0, idx) + f.alternative + newText.slice(idx + f.phrase.length)
-      }
+      if (idx === -1) return
+      const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
+      const replacement = isRemoval ? "" : f.alternative
+      newText = newText.slice(0, idx) + replacement + newText.slice(idx + f.phrase.length)
     })
+    newText = newText.replace(/  +/g, " ")
     setText(newText)
     setFindings([])
   }
@@ -91,7 +106,9 @@ export function ComplianceClient() {
           <Shield className="h-8 w-8 text-primary" />
           Compliance Checker
         </h1>
-        <p className="mt-2 text-muted-foreground">AI-powered Fair Housing scan. Paste your listing, click <strong>Run check</strong>, and ListingAI will flag risky language with explanations and safer alternatives.</p>
+        <p className="mt-2 text-muted-foreground">
+          AI-powered UK lettings compliance scan. Paste your listing, click <strong>Run check</strong>, and Tenancy will flag risky language with explanations and safer alternatives.
+        </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
@@ -102,14 +119,10 @@ export function ComplianceClient() {
               <Sparkles className="h-5 w-5 text-primary" />
               Your Listing
             </CardTitle>
-            <CardDescription>
-              Paste the full listing description below.
-            </CardDescription>
+            <CardDescription>Paste the full listing description below.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Label htmlFor="listing-text" className="sr-only">
-              Listing text
-            </Label>
+            <Label htmlFor="listing-text" className="sr-only">Listing text</Label>
             <Textarea
               id="listing-text"
               placeholder="Paste your property listing here to scan for compliance issues..."
@@ -131,15 +144,9 @@ export function ComplianceClient() {
               size="lg"
             >
               {scanning ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analysing with AI...
-                </>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analysing with AI...</>
               ) : (
-                <>
-                  <Shield className="mr-2 h-4 w-4" />
-                  Run check
-                </>
+                <><Shield className="mr-2 h-4 w-4" /> Run check</>
               )}
             </Button>
             {error && (
@@ -157,15 +164,9 @@ export function ComplianceClient() {
               <div>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   {findings === null ? (
-                    <>
-                      <Shield className="h-5 w-5 text-muted-foreground" />
-                      Results
-                    </>
+                    <><Shield className="h-5 w-5 text-muted-foreground" /> Results</>
                   ) : findings.length === 0 ? (
-                    <>
-                      <Check className="h-5 w-5 text-green-500" />
-                      All Clear
-                    </>
+                    <><Check className="h-5 w-5 text-green-500" /> All Clear</>
                   ) : (
                     <>
                       <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -175,7 +176,7 @@ export function ComplianceClient() {
                 </CardTitle>
                 <CardDescription className="mt-1">
                   {findings === null && "Click Run check to analyse your listing."}
-                  {findings !== null && findings.length === 0 && "No Fair Housing risks detected."}
+                  {findings !== null && findings.length === 0 && "No compliance risks detected."}
                   {findings !== null && findings.length > 0 && "Review and replace problematic phrases."}
                 </CardDescription>
               </div>
@@ -203,7 +204,7 @@ export function ComplianceClient() {
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
                 <p className="text-sm text-muted-foreground">
-                  ListingAI is reading your listing carefully...
+                  Tenancy is reading your listing carefully...
                 </p>
               </div>
             )}
@@ -217,8 +218,12 @@ export function ComplianceClient() {
                   Your listing looks compliant.
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-                  No Fair Housing risks or problematic language detected.
-                </p>
+  No UK lettings compliance risks detected. You can publish this listing.
+</p>
+<p className="mt-3 text-xs text-muted-foreground/70 max-w-xs">
+  💡 No need to run further checks — this listing is good to go.
+</p>
+
               </div>
             )}
 
@@ -251,7 +256,11 @@ export function ComplianceClient() {
                       className="w-full justify-start text-left h-auto py-2"
                     >
                       <RefreshCw className="mr-2 h-3 w-3 shrink-0" />
-                      <span className="truncate">Replace with: &ldquo;{f.alternative}&rdquo;</span>
+                      <span className="truncate">
+                        {f.alternative.trim().toLowerCase() === "[remove this phrase]"
+                          ? "Remove this phrase"
+                          : `Replace with: "${f.alternative}"`}
+                      </span>
                     </Button>
                   </div>
                 ))}
@@ -268,10 +277,10 @@ export function ComplianceClient() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-3">
           <p>
-            This tool uses AI to analyse listings against the UK <strong>Equality Act 2010</strong>, which protects individuals from discrimination based on age, disability, gender reassignment, marriage and civil partnership, pregnancy and maternity, race, religion or belief, sex, and sexual orientation.
+            This tool uses AI to analyse listings against UK lettings law, including the <strong>Equality Act 2010</strong>, the <strong>Tenant Fees Act 2019</strong>, and the <strong>Tenancy Deposit Scheme</strong> rules. It also catches DSS/benefits discrimination, which has been illegal since 2020 (Tyler v Paul Carr).
           </p>
           <p>
-            It also flags DSS/benefits discrimination and subjective safety claims that can be considered coded discriminatory language.
+            Findings cover banned fees, deposit cap violations, Right to Rent language, and discrimination based on protected characteristics.
           </p>
           <p className="text-xs">
             <strong>Disclaimer:</strong> This is an automated tool and not a substitute for legal advice. Always consult a qualified property law professional if you're unsure about a listing.

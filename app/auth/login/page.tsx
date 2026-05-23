@@ -34,7 +34,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="text-sm opacity-70">Log in to your ListingAI account.</p>
+          <p className="text-sm opacity-70">Log in to your Tenancy account.</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
