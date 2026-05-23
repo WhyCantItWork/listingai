@@ -21,8 +21,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-
-
 type Tier = "free" | "pro" | "lister" | "team"
 
 interface Profile {
@@ -84,18 +82,14 @@ function AccountPageContent() {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false)
   const [showCancelBanner, setShowCancelBanner] = useState(false)
   const [vaultUsed, setVaultUsed] = useState(0)
-  const [deleteConfirm, setDeleteConfirm] = useState("")
-  const [deleting, setDeleting] = useState(false)
-
-    // Delete account state
-  const [deleteConfirm, setDeleteConfirm] = useState("")
-  const [deleting, setDeleting] = useState(false)
-
-
 
   // Change email state
   const [newEmail, setNewEmail] = useState("")
   const [emailLoading, setEmailLoading] = useState(false)
+
+  // Delete account state
+  const [deleteConfirm, setDeleteConfirm] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -151,30 +145,6 @@ function AccountPageContent() {
       setPortalLoading(false)
     }
   }
-const handleDeleteAccount = async () => {
-  if (deleteConfirm !== "DELETE") {
-    toast.error("Type DELETE in capital letters to confirm")
-    return
-  }
-
-  setDeleting(true)
-  try {
-    const res = await fetch("/api/account/delete", { method: "POST" })
-    const data = await res.json()
-    if (!res.ok) {
-      toast.error("Couldn't delete account", { description: data.error || "Please try again or contact support." })
-      setDeleting(false)
-      return
-    }
-    toast.success("Account deleted", { description: "Your account and all data have been removed." })
-    // Hard navigation to clear all client state
-    window.location.href = "/"
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error"
-    toast.error("Couldn't delete account", { description: msg })
-    setDeleting(false)
-  }
-}
 
   const handleTopUp = async (topupId: string) => {
     setTopupLoading(topupId)
@@ -219,6 +189,7 @@ const handleDeleteAccount = async () => {
     setNewEmail("")
     setEmailLoading(false)
   }
+
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== "DELETE") {
       toast.error("Type DELETE in capital letters to confirm")
@@ -617,6 +588,74 @@ const handleDeleteAccount = async () => {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Delete Account */}
+      <Card className="border-rose-500/30">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2 text-rose-500">
+            <AlertTriangle className="h-5 w-5" />
+            Delete account
+          </CardTitle>
+          <CardDescription>
+            Permanently delete your account, all your saved listings, and your subscription. This can't be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Deleting your account will:
+          </p>
+          <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
+            <li>Cancel any active subscription immediately</li>
+            <li>Permanently delete all listings in your vault</li>
+            <li>Remove your profile and account data</li>
+            <li>Log you out of all devices</li>
+          </ul>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full sm:w-auto">
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Delete my account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  <span className="block">
+                    This action is <strong>permanent</strong>. Your account, all saved listings, and any active subscription will be deleted immediately and cannot be recovered.
+                  </span>
+                  <span className="block">
+                    Type <strong>DELETE</strong> below to confirm.
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                autoComplete="off"
+                disabled={deleting}
+                className="mt-2"
+              />
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => setDeleteConfirm("")}
+                  disabled={deleting}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirm !== "DELETE"}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? "Deleting..." : "Delete account permanently"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -624,78 +663,4 @@ const handleDeleteAccount = async () => {
 export default function AccountPage() {
   return (
     <Suspense fallback={
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
-        Loading account...
-      </div>
-    }>
-      <AccountPageContent />
-    </Suspense>
-  )
-}
-{/* Delete Account */}
-<Card className="border-rose-500/30">
-  <CardHeader>
-    <CardTitle className="text-lg flex items-center gap-2 text-rose-500">
-      <AlertTriangle className="h-5 w-5" />
-      Delete account
-    </CardTitle>
-    <CardDescription>
-      Permanently delete your account, all your saved listings, and your subscription. This can't be undone.
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-3">
-    <p className="text-sm text-muted-foreground">
-      Deleting your account will:
-    </p>
-    <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-      <li>Cancel any active subscription immediately</li>
-      <li>Permanently delete all listings in your vault</li>
-      <li>Remove your profile and account data</li>
-      <li>Log you out of all devices</li>
-    </ul>
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive" className="w-full sm:w-auto">
-          <AlertTriangle className="mr-2 h-4 w-4" />
-          Delete my account
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-3">
-            <span className="block">
-              This action is <strong>permanent</strong>. Your account, all saved listings, and any active subscription will be deleted immediately and cannot be recovered.
-            </span>
-            <span className="block">
-              Type <strong>DELETE</strong> below to confirm.
-            </span>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <Input
-          value={deleteConfirm}
-          onChange={(e) => setDeleteConfirm(e.target.value)}
-          placeholder="Type DELETE to confirm"
-          autoComplete="off"
-          disabled={deleting}
-          className="mt-2"
-        />
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            onClick={() => setDeleteConfirm("")}
-            disabled={deleting}
-          >
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDeleteAccount}
-            disabled={deleting || deleteConfirm !== "DELETE"}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {deleting ? "Deleting..." : "Delete account permanently"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </CardContent>
-</Card>
+      <div className="mx-auto max-w-2xl px
