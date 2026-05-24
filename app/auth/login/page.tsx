@@ -18,14 +18,48 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSendCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address.")
-      return
-    }
-    setLoading(true)
-    setError(null)
+const handleSendCode = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!email || !email.includes("@")) {
+    setError("Please enter a valid email address.")
+    return
+  }
+  setLoading(true)
+  setError(null)
+
+  // Check if email exists in our system
+  const checkRes = await fetch("/api/auth/check-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  })
+  const checkData = await checkRes.json()
+
+  if (!checkData.exists) {
+    setError("No account found with that email. Sign up first.")
+    setLoading(false)
+    return
+  }
+
+  const supabase = createClient()
+  const { error: authError } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      shouldCreateUser: false,
+    },
+  })
+
+  if (authError) {
+    setError(authError.message)
+    setLoading(false)
+    return
+  }
+
+  setSent(true)
+  setLoading(false)
+}
+
 
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOtp({
