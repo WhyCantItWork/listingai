@@ -18,48 +18,28 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-const handleSendCode = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!email || !email.includes("@")) {
-    setError("Please enter a valid email address.")
-    return
-  }
-  setLoading(true)
-  setError(null)
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address.")
+      return
+    }
+    setLoading(true)
+    setError(null)
 
-  // Check if email exists in our system
-  const checkRes = await fetch("/api/auth/check-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  })
-  const checkData = await checkRes.json()
+    // Check if email exists in our system
+    const checkRes = await fetch("/api/auth/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+    const checkData = await checkRes.json()
 
-  if (!checkData.exists) {
-    setError("No account found with that email. Sign up first.")
-    setLoading(false)
-    return
-  }
-
-  const supabase = createClient()
-  const { error: authError } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
-      shouldCreateUser: false,
-    },
-  })
-
-  if (authError) {
-    setError(authError.message)
-    setLoading(false)
-    return
-  }
-
-  setSent(true)
-  setLoading(false)
-}
-
+    if (!checkData.exists) {
+      setError("No account found with that email. Sign up first.")
+      setLoading(false)
+      return
+    }
 
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOtp({
@@ -71,11 +51,7 @@ const handleSendCode = async (e: React.FormEvent) => {
     })
 
     if (authError) {
-      if (authError.message.toLowerCase().includes("not found") || authError.message.toLowerCase().includes("signups not allowed")) {
-        setError("No account found with that email. Sign up first.")
-      } else {
-        setError(authError.message)
-      }
+      setError(authError.message)
       setLoading(false)
       return
     }
@@ -120,7 +96,7 @@ const handleSendCode = async (e: React.FormEvent) => {
             </div>
             <CardTitle className="text-2xl">Check your email</CardTitle>
             <CardDescription>
-              We've sent a 6-digit code and a sign-in link to <strong>{email}</strong>.
+              We&apos;ve sent a 6-digit code and a sign-in link to <strong>{email}</strong>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -178,7 +154,7 @@ const handleSendCode = async (e: React.FormEvent) => {
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
-            We'll email you a code and a sign-in link.
+            We&apos;ll email you a code and a sign-in link.
           </CardDescription>
         </CardHeader>
         <CardContent>

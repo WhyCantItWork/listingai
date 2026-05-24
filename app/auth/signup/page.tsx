@@ -27,6 +27,20 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
+    // Check if email already exists
+    const checkRes = await fetch("/api/auth/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+    const checkData = await checkRes.json()
+
+    if (checkData.exists) {
+      setError("An account with this email already exists. Try logging in instead.")
+      setLoading(false)
+      return
+    }
+
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
@@ -82,7 +96,7 @@ export default function SignupPage() {
             </div>
             <CardTitle className="text-2xl">Check your email</CardTitle>
             <CardDescription>
-              We've sent a 6-digit code and a sign-in link to <strong>{email}</strong>.
+              We&apos;ve sent a 6-digit code and a sign-in link to <strong>{email}</strong>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -140,7 +154,7 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl">Create your Tenancy account</CardTitle>
           <CardDescription>
-            We'll email you a code and a link. Use either to sign in.
+            We&apos;ll email you a code and a link. Use either to sign in.
           </CardDescription>
         </CardHeader>
         <CardContent>
