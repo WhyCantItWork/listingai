@@ -105,6 +105,37 @@ export default function TermsPage() {
         <p className="text-foreground">
           Questions? Email <a href="mailto:vr047836@gmail.com" className="text-primary underline">vr047836@gmail.com</a>.
         </p>
+<h2 className="text-xl font-bold mt-8 mb-3 text-foreground">14. Not a substitute for professional advice</h2>
+<p className="text-foreground">
+  Tenancy provides automation and productivity tools. Our Compliance Checker is an AI-assisted research and drafting aid only. It is not legal advice and does not create a solicitor-client relationship between Tenancy and any user.
+</p>
+<p className="text-foreground mt-3">
+  Users remain solely responsible for ensuring that any listing or document they publish to a property portal complies with all applicable UK laws, including but not limited to:
+</p>
+<ul className="list-disc pl-6 space-y-1 text-foreground">
+  <li>the Equality Act 2010</li>
+  <li>the Tenant Fees Act 2019</li>
+  <li>the Housing Act 1988 (as amended)</li>
+  <li>the Material Information requirements introduced in 2024</li>
+  <li>Right to Rent obligations under the Immigration Act 2014</li>
+  <li>the Data Protection Act 2018 and UK GDPR</li>
+</ul>
+<p className="text-foreground mt-3">
+  Nothing in Tenancy should be relied upon as a replacement for independent legal advice from a qualified solicitor or property law specialist. Users are strongly advised to have any listing or document reviewed by a professional before publication.
+</p>
+
+<h2 className="text-xl font-bold mt-8 mb-3 text-foreground">15. Limitation on liability for user-generated content</h2>
+<p className="text-foreground">
+  Tenancy is a platform through which users generate or store their own listings and documents. Users own all content they create, and Tenancy excludes liability for:
+</p>
+<ul className="list-disc pl-6 space-y-1 text-foreground">
+  <li>any legal fines, penalties, damages or costs arising from a user&apos;s published material</li>
+  <li>any claim that a listing breached the Equality Act 2010, Tenant Fees Act, or any other law</li>
+  <li>any loss caused by a user disclosing incorrect Material Information or failing to disclose mandatory information</li>
+</ul>
+<p className="text-foreground mt-3">
+  To the fullest extent permitted by law, Tenancy&apos;s total liability in connection with any claim shall not exceed the total amount actually paid by the user to Tenancy in the twelve months preceding the claim.
+</p>
 
         <div className="mt-12 pt-6 border-t border-border">
           <Link href="/" className="text-sm text-primary underline">← Back to Tenancy</Link>

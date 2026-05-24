@@ -89,6 +89,11 @@ export default function PrivacyPage() {
         <p className="text-foreground">
           We use industry-standard security measures including HTTPS encryption, hashed passwords, and Row Level Security on our database (so users can only see their own data). No system is 100% secure, but we work hard to protect your data.
         </p>
+        <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">8. Security</h2>
+<p className="text-foreground">
+  We use industry-standard security measures...
+</p>
+
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">9. Changes to this policy</h2>
         <p className="text-foreground">
