@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -10,12 +11,14 @@ import { Label } from "@/components/ui/label"
 import { Mail, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react"
 
 export default function SignupPage() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
+  const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !email.includes("@")) {
       setError("Please enter a valid email address.")
@@ -43,6 +46,32 @@ export default function SignupPage() {
     setLoading(false)
   }
 
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!code || code.length !== 6) {
+      setError("Enter the 6-digit code from your email.")
+      return
+    }
+    setLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "email",
+    })
+
+    if (verifyError) {
+      setError("Invalid or expired code. Try again or request a new one.")
+      setLoading(false)
+      return
+    }
+
+    router.push("/")
+    router.refresh()
+  }
+
   if (sent) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
@@ -53,14 +82,46 @@ export default function SignupPage() {
             </div>
             <CardTitle className="text-2xl">Check your email</CardTitle>
             <CardDescription>
-              We've sent a magic link to <strong>{email}</strong>. Click it to finish signing in — no password needed.
+              We've sent a 6-digit code and a sign-in link to <strong>{email}</strong>.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground text-center">
-            <p>The link expires in 1 hour.</p>
-            <p>
-              Didn't get it?{" "}
-              <button onClick={() => setSent(false)} className="text-primary underline">
+          <CardContent className="space-y-4">
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Enter the 6-digit code</Label>
+                <Input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  disabled={loading}
+                  autoFocus
+                  className="text-center text-2xl tracking-widest font-mono"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-md p-3">
+                  {error}
+                </p>
+              )}
+
+              <Button type="submit" disabled={loading || code.length !== 6} className="w-full" size="lg">
+                {loading ? "Verifying..." : "Sign in"}
+              </Button>
+            </form>
+
+            <p className="text-center text-xs text-muted-foreground pt-2 border-t border-border">
+              Or click the link in the email to sign in instantly. Either works.
+            </p>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Wrong email?{" "}
+              <button onClick={() => { setSent(false); setCode(""); setError(null) }} className="text-primary underline">
                 Try again
               </button>
             </p>
@@ -79,11 +140,11 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl">Create your Tenancy account</CardTitle>
           <CardDescription>
-            We'll email you a link to sign in. No password to remember.
+            We'll email you a code and a link. Use either to sign in.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSendCode} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
@@ -109,7 +170,7 @@ export default function SignupPage() {
             )}
 
             <Button type="submit" disabled={loading || !email} className="w-full" size="lg">
-              {loading ? "Sending magic link..." : <>Send magic link <ArrowRight className="ml-2 h-4 w-4" /></>}
+              {loading ? "Sending..." : <>Continue <ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </form>
 
