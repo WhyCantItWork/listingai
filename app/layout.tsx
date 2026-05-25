@@ -12,11 +12,33 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
-  title: "Tenancy - Write Better Property Listings in Seconds",
-  description:
-    "AI-powered property listing descriptions for estate agents. Generate compelling, compliant listings in seconds, not minutes.",
-  keywords: ["property listings", "estate agent", "AI", "real estate", "listing generator"],
+  metadataBase: new URL("[tenancy.it.com](https://tenancy.it.com)"),
+  title: "Tenancy — AI Listings for UK Letting Agents",
+  description: "AI-powered property listing descriptions and Material Information packs for UK letting agents. Generate compliant, professional listings in seconds.",
+  keywords: ["UK letting agents", "property listings", "Material Information", "AI", "lettings", "tenancy", "Rightmove", "Zoopla"],
   authors: [{ name: "Tenancy" }],
+  openGraph: {
+    title: "Tenancy — AI Listings for UK Letting Agents",
+    description: "Generate compliant UK property listings in seconds. Material Information packs, compliance scanning, and Rightmove-ready descriptions.",
+    url: "[tenancy.it.com](https://tenancy.it.com)",
+    siteName: "Tenancy",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Tenancy — AI Listings for UK Letting Agents",
+      },
+    ],
+    locale: "en_GB",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tenancy — AI Listings for UK Letting Agents",
+    description: "Generate compliant UK property listings in seconds.",
+    images: ["/og-image.png"],
+  },
 }
 
 export const viewport: Viewport = {
