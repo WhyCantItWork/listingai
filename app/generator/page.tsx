@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { toast } from "sonner"
 import {
   Home,
   Building2,
@@ -22,7 +21,9 @@ import {
   Wifi,
   Car,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -180,6 +181,12 @@ interface FormData {
   variants: number
 }
 
+interface Variant {
+  content: string
+  tone: string
+  audience: string
+}
+
 export default function GeneratorPage() {
   const [formData, setFormData] = useState<FormData>({
     propertyType: "",
@@ -218,11 +225,12 @@ export default function GeneratorPage() {
 
   const [output, setOutput] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [savedVariants, setSavedVariants] = useState<number[]>([])
   const [tier, setTier] = useState<"free" | "pro" | "lister" | "team">("free")
   const [usage, setUsage] = useState<{ used: number; limit: number | null }>({ used: 0, limit: 5 })
-  const [listings, setListings] = useState<string[]>([])
+  const [variants, setVariants] = useState<Variant[]>([])
   const [activeVariant, setActiveVariant] = useState(0)
   const [vaultFull, setVaultFull] = useState(false)
 
@@ -245,7 +253,6 @@ export default function GeneratorPage() {
         const tierLimits: Record<string, number | null> = { free: 5, pro: 100, lister: null, team: null }
         const baseLimit = tierLimits[profile.tier] ?? null
 
-        // Listings bonus
         const bonusExpiresAt = profile.bonus_listings_expires_at
           ? new Date(profile.bonus_listings_expires_at)
           : null
@@ -257,7 +264,6 @@ export default function GeneratorPage() {
           limit: baseLimit === null ? null : baseLimit + activeBonus,
         })
 
-        // Vault capacity check via API
         const tierCaps: Record<string, number | null> = { free: 0, pro: 50, lister: null, team: null }
         const baseCapForVault = tierCaps[profile.tier] ?? null
         let bonusVault = 0
@@ -290,7 +296,8 @@ export default function GeneratorPage() {
   const handleGenerate = async () => {
     setIsGenerating(true)
     setOutput("")
-    setSaved(false)
+    setSavedVariants([])
+    setVariants([])
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -305,9 +312,14 @@ export default function GeneratorPage() {
         }
         throw new Error(data.error || "Failed to generate listing")
       }
-      setListings(data.listings || [data.listing])
+      const newVariants: Variant[] = data.variants || (data.listings || [data.listing]).map((c: string) => ({
+        content: c,
+        tone: formData.tone,
+        audience: formData.audience,
+      }))
+      setVariants(newVariants)
       setActiveVariant(0)
-      setOutput(data.listing)
+      setOutput(newVariants[0]?.content || "")
       if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown error"
@@ -316,67 +328,118 @@ export default function GeneratorPage() {
     setIsGenerating(false)
   }
 
+  const handleRegenerateVariant = async (idx: number, newTone: string) => {
+    setRegeneratingIdx(idx)
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, variants: 1, forceTone: newTone }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        if (response.status === 402 && data.error === "limit_reached") {
+          toast.error("Limit reached", { description: data.message })
+          return
+        }
+        throw new Error(data.error || "Failed to regenerate")
+      }
+      const newVariant: Variant | undefined = data.variants?.[0]
+      if (!newVariant) throw new Error("No variant returned")
+
+      setVariants((prev) => {
+        const next = [...prev]
+        next[idx] = newVariant
+        return next
+      })
+      if (idx === activeVariant) setOutput(newVariant.content)
+      // Remove this variant from "saved" if it was previously saved
+      setSavedVariants((prev) => prev.filter((i) => i !== idx))
+      if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
+      toast.success("Regenerated", { description: `New ${newTone} version ready.` })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      toast.error("Regeneration failed", { description: msg })
+    }
+    setRegeneratingIdx(null)
+  }
+
   async function handleCopy() {
     await navigator.clipboard.writeText(output)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+    toast.success("Copied to clipboard")
   }
 
-const handleSaveToVault = async () => {
-  if (!output) return
-
-  try {
-    const res = await fetch("/api/vault", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content: output,
-        address: formData.address || null,
-        property_type: formData.propertyType || null,
-        rent: formData.rent || null,
-        furnished: formData.furnished || null,
-      }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      if (res.status === 402 && data.error === "vault_full") {
-        toast.error("Vault is full", {
-          description: data.message || "Buy a vault top-up on your Account page or upgrade to Lister for unlimited storage.",
-          action: {
-            label: "Top up",
-            onClick: () => window.location.href = "/account",
-          },
-          duration: 8000,
-        })
-        setVaultFull(true)
-      } else if (res.status === 403 && data.error === "vault_locked") {
-        toast.error("Vault locked", {
-          description: data.message || "Vault storage requires a paid plan.",
-          action: {
-            label: "Upgrade",
-            onClick: () => window.location.href = "/pricing",
-          },
-        })
-      } else {
-        toast.error("Failed to save", {
-          description: data.error || "Please try again.",
-        })
+  const saveOneVariant = async (idx: number): Promise<boolean> => {
+    const variant = variants[idx]
+    if (!variant) return false
+    try {
+      const res = await fetch("/api/vault", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: variant.content,
+          address: formData.address || null,
+          property_type: formData.propertyType || null,
+          rent: formData.rent || null,
+          furnished: formData.furnished || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 402 && data.error === "vault_full") {
+          toast.error("Vault is full", {
+            description: data.message || "Buy a vault top-up or upgrade to Lister.",
+            action: { label: "Top up", onClick: () => window.location.href = "/account" },
+          })
+          setVaultFull(true)
+        } else if (res.status === 403 && data.error === "vault_locked") {
+          toast.error("Vault locked", {
+            description: data.message || "Vault storage requires a paid plan.",
+            action: { label: "Upgrade", onClick: () => window.location.href = "/pricing" },
+          })
+        } else {
+          toast.error("Failed to save", { description: data.error || "Please try again." })
+        }
+        return false
       }
-      return
+      return true
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      toast.error("Failed to save", { description: msg })
+      return false
     }
-
-    setSaved(true)
-    toast.success("Saved to vault", {
-      description: "You can find this listing on your Vault page.",
-    })
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error"
-    toast.error("Failed to save", { description: msg })
   }
-}
 
+  const handleSaveCurrentVariant = async () => {
+    if (!variants.length) return
+    const ok = await saveOneVariant(activeVariant)
+    if (ok) {
+      setSavedVariants((prev) => Array.from(new Set([...prev, activeVariant])))
+      toast.success("Saved to vault", { description: `Version ${activeVariant + 1} saved.` })
+    }
+  }
+
+  const handleSaveAllVariants = async () => {
+    if (!variants.length) return
+    let savedCount = 0
+    const newlySaved: number[] = []
+    for (let i = 0; i < variants.length; i++) {
+      if (savedVariants.includes(i)) continue
+      const ok = await saveOneVariant(i)
+      if (ok) {
+        savedCount++
+        newlySaved.push(i)
+      } else {
+        break
+      }
+    }
+    if (newlySaved.length > 0) {
+      setSavedVariants((prev) => Array.from(new Set([...prev, ...newlySaved])))
+      toast.success(`Saved ${savedCount} version${savedCount !== 1 ? "s" : ""} to vault`)
+    }
+  }
 
   const handleDownloadPDF = () => {
     if (!output) return
@@ -577,6 +640,9 @@ const handleSaveToVault = async () => {
       .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
     doc.save(`tenancy-pack-${slug}.pdf`)
   }
+
+  const isCurrentSaved = savedVariants.includes(activeVariant)
+  const allSaved = variants.length > 0 && variants.every((_, i) => savedVariants.includes(i))
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -911,6 +977,11 @@ const handleSaveToVault = async () => {
                     <SelectItem value="3">3 versions to compare</SelectItem>
                   </SelectContent>
                 </Select>
+                {(tier === "lister" || tier === "team") && formData.variants > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    Each version uses a different tone and audience automatically. You can regenerate any version below.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -969,6 +1040,26 @@ const handleSaveToVault = async () => {
             <CardDescription>Your AI-generated tenancy description will appear here.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+
+            {variants.length > 1 && (
+              <div className="space-y-2 pb-3 border-b border-border">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs uppercase font-mono opacity-60 mr-1">Versions:</span>
+                  {variants.map((v, i) => (
+                    <Button
+                      key={i}
+                      size="sm"
+                      variant={activeVariant === i ? "default" : "outline"}
+                      onClick={() => { setActiveVariant(i); setOutput(v.content); }}
+                    >
+                      V{i + 1}
+                      {savedVariants.includes(i) && <Check className="ml-1 h-3 w-3" />}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="min-h-[400px] rounded-lg border border-border bg-secondary/30 p-4">
               {output ? (
                 <p className="whitespace-pre-wrap text-foreground">{output}</p>
@@ -979,32 +1070,71 @@ const handleSaveToVault = async () => {
               )}
             </div>
 
-            {listings.length > 1 && (
-              <div className="flex gap-2 pb-3 border-b border-border mb-3">
-                <span className="text-xs uppercase font-mono opacity-60 self-center mr-2">Versions:</span>
-                {listings.map((_, i) => (
-                  <Button key={i} size="sm" variant={activeVariant === i ? "default" : "outline"}
-                    onClick={() => { setActiveVariant(i); setOutput(listings[i]); }}>
-                    Version {i + 1}
-                  </Button>
-                ))}
+            {variants.length > 0 && variants[activeVariant] && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pb-2 border-b border-border">
+                <span className="font-mono uppercase opacity-60">Tone:</span>
+                <span className="font-medium text-foreground capitalize">{variants[activeVariant].tone}</span>
+                <span className="opacity-40">·</span>
+                <span className="font-mono uppercase opacity-60">Audience:</span>
+                <span className="font-medium text-foreground capitalize">{variants[activeVariant].audience.replace(/-/g, " ")}</span>
+                <span className="opacity-40 mx-1">·</span>
+                <Select
+                  value=""
+                                    onValueChange={(v) => { if (v) handleRegenerateVariant(activeVariant, v) }}
+                  disabled={regeneratingIdx !== null || isGenerating}
+                >
+                  <SelectTrigger className="h-7 w-auto px-2 text-xs gap-1 ml-auto">
+                    {regeneratingIdx === activeVariant ? (
+                      <><Loader2 className="h-3 w-3 animate-spin" /> Regenerating</>
+                    ) : (
+                      <><RefreshCw className="h-3 w-3" /> Regenerate with new tone</>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tones.filter(t => t.value !== variants[activeVariant].tone).map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
             {output && (
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex gap-3 flex-wrap pt-2">
                 <Button onClick={handleCopy} variant="outline" className="flex-1 min-w-[120px]">
                   {copied ? (<><Check className="mr-2 h-4 w-4" /> Copied!</>) : (<><Copy className="mr-2 h-4 w-4" /> Copy</>)}
                 </Button>
-                <Button onClick={handleSaveToVault} variant="outline" className="flex-1 min-w-[120px]" disabled={saved || vaultFull}>
-                  {saved ? (
-                    <><Check className="mr-2 h-4 w-4" /> Saved!</>
+
+                <Button
+                  onClick={handleSaveCurrentVariant}
+                  variant="outline"
+                  className="flex-1 min-w-[120px]"
+                  disabled={isCurrentSaved || vaultFull}
+                >
+                  {isCurrentSaved ? (
+                    <><Check className="mr-2 h-4 w-4" /> Saved</>
                   ) : vaultFull ? (
                     <><Save className="mr-2 h-4 w-4" /> Vault full</>
                   ) : (
-                    <><Save className="mr-2 h-4 w-4" /> Save to Vault</>
+                    <><Save className="mr-2 h-4 w-4" /> Save{variants.length > 1 ? ` V${activeVariant + 1}` : ""}</>
                   )}
                 </Button>
+
+                {variants.length > 1 && (
+                  <Button
+                    onClick={handleSaveAllVariants}
+                    variant="outline"
+                    className="flex-1 min-w-[120px]"
+                    disabled={allSaved || vaultFull}
+                  >
+                    {allSaved ? (
+                      <><Check className="mr-2 h-4 w-4" /> All saved</>
+                    ) : (
+                      <><Save className="mr-2 h-4 w-4" /> Save all</>
+                    )}
+                  </Button>
+                )}
+
                 <Button onClick={handleDownloadPDF} variant="outline" className="flex-1 min-w-[120px]" disabled={tier === "free"}>
                   <Download className="mr-2 h-4 w-4" />
                   {tier === "free" ? (
