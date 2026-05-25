@@ -47,6 +47,7 @@ export default function RootLayout({
         </ThemeProvider>
         <Toaster richColors position="top-right" />
         {process.env.NODE_ENV === "production" && <Analytics />}
+        <SpeedInsights />
       </body>
     </html>
   )
