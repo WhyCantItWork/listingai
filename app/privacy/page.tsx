@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">2. What we collect</h2>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
-          <li><strong>Account data:</strong> email address and password (passwords are hashed and never visible to us).</li>
+          <li><strong>Account data:</strong> your email address. Tenancy uses magic-link authentication, so we don't store passwords.</li>
           <li><strong>Listing content:</strong> the property details you enter, the AI-generated descriptions, and any listings you save to your vault.</li>
           <li><strong>Compliance scan inputs:</strong> any listing text you paste into the Compliance Checker.</li>
           <li><strong>A/B test inputs:</strong> any variants you submit to the A/B Test tool.</li>
