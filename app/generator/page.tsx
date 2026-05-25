@@ -24,6 +24,10 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -242,9 +246,6 @@ export default function GeneratorPage() {
   const [variants, setVariants] = useState<Variant[]>([])
   const [activeVariant, setActiveVariant] = useState(0)
   const [vaultFull, setVaultFull] = useState(false)
-  const [regenModalOpen, setRegenModalOpen] = useState(false)
-  const [regenTone, setRegenTone] = useState("")
-  const [regenAudience, setRegenAudience] = useState("")
 
 
   useEffect(() => {
@@ -1089,29 +1090,62 @@ export default function GeneratorPage() {
             </div>
 
 {variants.length > 0 && variants[activeVariant] && (
-  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pb-2 border-b border-border">
-    <span className="font-mono uppercase opacity-60">Tone:</span>
-    <span className="font-medium text-foreground capitalize">{variants[activeVariant].tone}</span>
-    <span className="opacity-40">·</span>
-    <span className="font-mono uppercase opacity-60">Audience:</span>
-    <span className="font-medium text-foreground capitalize">{variants[activeVariant].audience.replace(/-/g, " ")}</span>
-    <Button
-      size="sm"
-      variant="outline"
-      className="ml-auto h-7 text-xs gap-1"
-      onClick={() => {
-        setRegenTone(variants[activeVariant].tone)
-        setRegenAudience(variants[activeVariant].audience)
-        setRegenModalOpen(true)
-      }}
-      disabled={regeneratingIdx !== null || isGenerating}
-    >
-      {regeneratingIdx === activeVariant ? (
-        <><Loader2 className="h-3 w-3 animate-spin" /> Regenerating</>
-      ) : (
-        <><RefreshCw className="h-3 w-3" /> Regenerate</>
+  <div className="space-y-2 pb-2 border-b border-border">
+    <div className="flex flex-wrap items-center gap-3 text-xs">
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono uppercase opacity-60 text-muted-foreground">Tone:</span>
+        <Select
+          value={variants[activeVariant].tone}
+          onValueChange={(newTone) => {
+            if (newTone !== variants[activeVariant].tone) {
+              handleRegenerateVariant(activeVariant, newTone, variants[activeVariant].audience)
+            }
+          }}
+          disabled={regeneratingIdx !== null || isGenerating}
+        >
+          <SelectTrigger className="h-7 px-2 text-xs gap-1 w-auto min-w-[110px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {tones.map((t) => (
+              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono uppercase opacity-60 text-muted-foreground">Audience:</span>
+        <Select
+          value={variants[activeVariant].audience}
+          onValueChange={(newAudience) => {
+            if (newAudience !== variants[activeVariant].audience) {
+              handleRegenerateVariant(activeVariant, variants[activeVariant].tone, newAudience)
+            }
+          }}
+          disabled={regeneratingIdx !== null || isGenerating}
+        >
+          <SelectTrigger className="h-7 px-2 text-xs gap-1 w-auto min-w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {audiences.map((a) => (
+              <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {regeneratingIdx === activeVariant && (
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Regenerating...</span>
+        </div>
       )}
-    </Button>
+    </div>
+    <p className="text-[11px] text-muted-foreground">
+      Change either dropdown to regenerate this version with a different tone or audience.
+    </p>
   </div>
 )}
 
@@ -1163,7 +1197,6 @@ export default function GeneratorPage() {
           </CardContent>
         </Card>
       </div>
-       <Dialog open={regenModalOpen} onOpenChange={setRegenModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Regenerate version {activeVariant + 1}</DialogTitle>
