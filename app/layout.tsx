@@ -12,7 +12,7 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
-  metadataBase: new URL("[tenancy.it.com](https://tenancy.it.com)"),
+  metadataBase: new URL("https://tenancy.it.com"),
   title: "Tenancy — AI Listings for UK Letting Agents",
   description: "AI-powered property listing descriptions and Material Information packs for UK letting agents. Generate compliant, professional listings in seconds.",
   keywords: ["UK letting agents", "property listings", "Material Information", "AI", "lettings", "tenancy", "Rightmove", "Zoopla"],
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Tenancy — AI Listings for UK Letting Agents",
     description: "Generate compliant UK property listings in seconds. Material Information packs, compliance scanning, and Rightmove-ready descriptions.",
-    url: "[tenancy.it.com](https://tenancy.it.com)",
+    url: "https://tenancy.it.com",
     siteName: "Tenancy",
     images: [
       {
