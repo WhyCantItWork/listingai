@@ -26,6 +26,10 @@ export function Footer() {
             <Link href="/terms" className="hover:text-foreground transition-colors">
               Terms
             </Link>
+            <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition">
+  FAQ
+</Link>
+
             <a
               href="mailto:vr047836@gmail.com"
               className="hover:text-foreground transition-colors"
