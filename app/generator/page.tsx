@@ -30,6 +30,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -233,6 +242,10 @@ export default function GeneratorPage() {
   const [variants, setVariants] = useState<Variant[]>([])
   const [activeVariant, setActiveVariant] = useState(0)
   const [vaultFull, setVaultFull] = useState(false)
+  const [regenModalOpen, setRegenModalOpen] = useState(false)
+  const [regenTone, setRegenTone] = useState("")
+  const [regenAudience, setRegenAudience] = useState("")
+
 
   useEffect(() => {
     const loadUser = async () => {
@@ -328,41 +341,46 @@ export default function GeneratorPage() {
     setIsGenerating(false)
   }
 
-  const handleRegenerateVariant = async (idx: number, newTone: string) => {
-    setRegeneratingIdx(idx)
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, variants: 1, forceTone: newTone }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        if (response.status === 402 && data.error === "limit_reached") {
-          toast.error("Limit reached", { description: data.message })
-          return
-        }
-        throw new Error(data.error || "Failed to regenerate")
+  const handleRegenerateVariant = async (idx: number, newTone: string, newAudience: string) => {
+  setRegeneratingIdx(idx)
+  try {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...formData,
+        variants: 1,
+        forceTone: newTone,
+        audience: newAudience,
+      }),
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      if (response.status === 402 && data.error === "limit_reached") {
+        toast.error("Limit reached", { description: data.message })
+        return
       }
-      const newVariant: Variant | undefined = data.variants?.[0]
-      if (!newVariant) throw new Error("No variant returned")
-
-      setVariants((prev) => {
-        const next = [...prev]
-        next[idx] = newVariant
-        return next
-      })
-      if (idx === activeVariant) setOutput(newVariant.content)
-      // Remove this variant from "saved" if it was previously saved
-      setSavedVariants((prev) => prev.filter((i) => i !== idx))
-      if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
-      toast.success("Regenerated", { description: `New ${newTone} version ready.` })
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unknown error"
-      toast.error("Regeneration failed", { description: msg })
+      throw new Error(data.error || "Failed to regenerate")
     }
-    setRegeneratingIdx(null)
+    const newVariant: Variant | undefined = data.variants?.[0]
+    if (!newVariant) throw new Error("No variant returned")
+
+    setVariants((prev) => {
+      const next = [...prev]
+      next[idx] = newVariant
+      return next
+    })
+    if (idx === activeVariant) setOutput(newVariant.content)
+    setSavedVariants((prev) => prev.filter((i) => i !== idx))
+    if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
+    toast.success("Regenerated", { description: `New ${newTone} version for ${newAudience.replace(/-/g, " ")}.` })
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error"
+    toast.error("Regeneration failed", { description: msg })
   }
+  setRegeneratingIdx(null)
+}
+
 
   async function handleCopy() {
     await navigator.clipboard.writeText(output)
@@ -1070,34 +1088,33 @@ export default function GeneratorPage() {
               )}
             </div>
 
-            {variants.length > 0 && variants[activeVariant] && (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pb-2 border-b border-border">
-                <span className="font-mono uppercase opacity-60">Tone:</span>
-                <span className="font-medium text-foreground capitalize">{variants[activeVariant].tone}</span>
-                <span className="opacity-40">·</span>
-                <span className="font-mono uppercase opacity-60">Audience:</span>
-                <span className="font-medium text-foreground capitalize">{variants[activeVariant].audience.replace(/-/g, " ")}</span>
-                <span className="opacity-40 mx-1">·</span>
-                <Select
-                  value=""
-                                    onValueChange={(v) => { if (v) handleRegenerateVariant(activeVariant, v) }}
-                  disabled={regeneratingIdx !== null || isGenerating}
-                >
-                  <SelectTrigger className="h-7 w-auto px-2 text-xs gap-1 ml-auto">
-                    {regeneratingIdx === activeVariant ? (
-                      <><Loader2 className="h-3 w-3 animate-spin" /> Regenerating</>
-                    ) : (
-                      <><RefreshCw className="h-3 w-3" /> Regenerate with new tone</>
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tones.filter(t => t.value !== variants[activeVariant].tone).map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+{variants.length > 0 && variants[activeVariant] && (
+  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pb-2 border-b border-border">
+    <span className="font-mono uppercase opacity-60">Tone:</span>
+    <span className="font-medium text-foreground capitalize">{variants[activeVariant].tone}</span>
+    <span className="opacity-40">·</span>
+    <span className="font-mono uppercase opacity-60">Audience:</span>
+    <span className="font-medium text-foreground capitalize">{variants[activeVariant].audience.replace(/-/g, " ")}</span>
+    <Button
+      size="sm"
+      variant="outline"
+      className="ml-auto h-7 text-xs gap-1"
+      onClick={() => {
+        setRegenTone(variants[activeVariant].tone)
+        setRegenAudience(variants[activeVariant].audience)
+        setRegenModalOpen(true)
+      }}
+      disabled={regeneratingIdx !== null || isGenerating}
+    >
+      {regeneratingIdx === activeVariant ? (
+        <><Loader2 className="h-3 w-3 animate-spin" /> Regenerating</>
+      ) : (
+        <><RefreshCw className="h-3 w-3" /> Regenerate</>
+      )}
+    </Button>
+  </div>
+)}
+
 
             {output && (
               <div className="flex gap-3 flex-wrap pt-2">
@@ -1146,6 +1163,55 @@ export default function GeneratorPage() {
           </CardContent>
         </Card>
       </div>
+       <Dialog open={regenModalOpen} onOpenChange={setRegenModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Regenerate version {activeVariant + 1}</DialogTitle>
+            <DialogDescription>
+              Pick a tone and audience for this version. The other versions stay as they are.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="regenTone">Tone</Label>
+              <Select value={regenTone} onValueChange={setRegenTone}>
+                <SelectTrigger id="regenTone"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {tones.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="regenAudience">Target audience</Label>
+              <Select value={regenAudience} onValueChange={setRegenAudience}>
+                <SelectTrigger id="regenAudience"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {audiences.map((a) => (
+                    <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRegenModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setRegenModalOpen(false)
+                handleRegenerateVariant(activeVariant, regenTone, regenAudience)
+              }}
+              disabled={!regenTone || !regenAudience}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Regenerate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
