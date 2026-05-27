@@ -99,7 +99,33 @@ const handleReplace = (finding: Finding) => {
 
   const before = text.slice(0, idx)
   const after = text.slice(endIdx)
-  const newText = (before + replacement + after).replace(/  +/g, " ")
+let newText = before + replacement + after
+
+// Smart cleanup when removing a phrase
+if (isRemoval) {
+  // Remove orphaned punctuation left behind: " , ", " . ", " ; ", etc.
+  newText = newText.replace(/\s+([.,;:!?])\s+/g, "$1 ")
+  // Remove leading punctuation at start of sentences/clauses
+  newText = newText.replace(/([.!?])\s*[,;:]\s*/g, "$1 ")
+  // Remove double punctuation: ".." "., " ", ." ",,"
+  newText = newText.replace(/([.,;:!?])\s*[.,;:!?]+/g, "$1")
+  // Remove punctuation directly after another sentence end: ". ."
+  newText = newText.replace(/([.!?])\s+([.,;:])/g, "$1")
+  // Remove trailing comma before period: "word,. " → "word. "
+  newText = newText.replace(/,\s*\./g, ".")
+  // Remove space before punctuation
+  newText = newText.replace(/\s+([.,;:!?])/g, "$1")
+}
+
+// Always collapse multiple spaces and trim line edges
+newText = newText.replace(/  +/g, " ").replace(/\n /g, "\n").replace(/ \n/g, "\n")
+
+// Clean up empty sentences (just a period and space)
+newText = newText.replace(/(?:^|[.!?]\s+)\.\s+/g, " ")
+
+// Trim
+newText = newText.trim()
+
 
   setText(newText)
   setFindings((prev) => prev?.filter((f) => f !== finding) ?? null)
@@ -107,20 +133,32 @@ const handleReplace = (finding: Finding) => {
 }
 
 
-  const handleReplaceAll = () => {
-    if (!findings) return
-    let newText = text
-    findings.forEach((f) => {
-      const idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
-      if (idx === -1) return
-      const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
-      const replacement = isRemoval ? "" : f.alternative
-      newText = newText.slice(0, idx) + replacement + newText.slice(idx + f.phrase.length)
-    })
-    newText = newText.replace(/  +/g, " ")
-    setText(newText)
-    setFindings([])
-  }
+const handleReplaceAll = () => {
+  if (!findings) return
+  let newText = text
+  findings.forEach((f) => {
+    const idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
+    if (idx === -1) return
+    const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
+    const replacement = isRemoval ? "" : f.alternative
+    newText = newText.slice(0, idx) + replacement + newText.slice(idx + f.phrase.length)
+  })
+
+  // Smart cleanup
+  newText = newText.replace(/\s+([.,;:!?])\s+/g, "$1 ")
+  newText = newText.replace(/([.!?])\s*[,;:]\s*/g, "$1 ")
+  newText = newText.replace(/([.,;:!?])\s*[.,;:!?]+/g, "$1")
+  newText = newText.replace(/([.!?])\s+([.,;:])/g, "$1")
+  newText = newText.replace(/,\s*\./g, ".")
+  newText = newText.replace(/\s+([.,;:!?])/g, "$1")
+  newText = newText.replace(/  +/g, " ").replace(/\n /g, "\n").replace(/ \n/g, "\n")
+  newText = newText.replace(/(?:^|[.!?]\s+)\.\s+/g, " ")
+  newText = newText.trim()
+
+  setText(newText)
+  setFindings([])
+}
+
 
   const severityColor = (s: Finding["severity"]) => {
     if (s === "high") return "border-rose-500/50 bg-rose-500/10 text-rose-600 dark:text-rose-400"
