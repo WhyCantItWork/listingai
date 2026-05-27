@@ -344,11 +344,12 @@ const handleReplaceAll = () => {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-3">
           <p>
-            This tool uses AI to analyse listings against UK lettings law, including the <strong>Equality Act 2010</strong>, the <strong>Tenant Fees Act 2019</strong>, and the <strong>Tenancy Deposit Scheme</strong> rules. It also catches DSS/benefits discrimination, which has been illegal since 2020 (Tyler v Paul Carr).
-          </p>
-          <p>
-            Findings cover banned fees, deposit cap violations, Right to Rent language, and discrimination based on protected characteristics.
-          </p>
+  This tool uses AI to analyse listings against UK lettings law, including the <strong>Renters' Rights Act 2025</strong> (in force from 1 May 2026), the <strong>Equality Act 2010</strong>, the <strong>Tenant Fees Act 2019</strong>, and the <strong>Tenancy Deposit Scheme</strong> rules. It also catches DSS/benefits discrimination, which has been illegal since 2020 (Tyler v Paul Carr).
+</p>
+<p>
+  Findings cover the new tenancy reforms (rental bidding bans, rent-in-advance restrictions, indefinite periodic tenancies), banned fees, deposit cap violations, Right to Rent language, and discrimination based on protected characteristics including children and benefit recipients.
+</p>
+
           <p className="text-xs">
             <strong>Disclaimer:</strong> This is an automated tool and not a substitute for legal advice. Always consult a qualified property law professional if you're unsure about a listing.
           </p>
