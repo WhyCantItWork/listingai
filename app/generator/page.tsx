@@ -612,15 +612,23 @@ export default function GeneratorPage() {
     doc.setFont("helvetica", "normal")
     doc.setFontSize(10)
     doc.setTextColor(60)
-    const reminders = [
-      "• Provide the tenant with the latest How to Rent guide (gov.uk).",
-      "• Conduct Right to Rent immigration checks on all tenants over 18.",
-      "• Protect the deposit in a government-approved scheme within 30 days.",
-      "• Provide a valid Energy Performance Certificate (EPC).",
-      "• Provide a current Gas Safety Certificate (if gas is present).",
-      "• Provide an Electrical Installation Condition Report (EICR) less than 5 years old.",
-      "• Install working smoke alarms on every storey and CO alarms in rooms with solid fuel.",
-    ]
+  const reminders = [
+  "• Provide the tenant with the latest How to Rent guide (gov.uk).",
+  "• Conduct Right to Rent immigration checks on all tenants over 18.",
+  "• Protect the deposit in a government-approved scheme within 30 days.",
+  "• Provide a valid Energy Performance Certificate (EPC).",
+  "• Provide a current Gas Safety Certificate (if gas is present).",
+  "• Provide an Electrical Installation Condition Report (EICR) less than 5 years old.",
+  "• Install working smoke alarms on every storey and CO alarms in rooms with solid fuel.",
+  "• Under the Renters' Rights Act 2025 (in force from 1 May 2026): all new tenancies are indefinite periodic — no fixed term.",
+  "• Section 21 no-fault evictions are abolished. Possession requires a Section 8 ground only.",
+  "• Rental bidding is illegal — accept applications at the advertised rent.",
+  "• Rent in advance for new tenancies is restricted — do not request multiple months upfront.",
+  "• Discriminating against tenants with children or those receiving benefits is illegal.",
+  "• Register with the new Private Rented Sector Database when it goes live.",
+  "• Comply with the new Decent Homes Standard for the private rented sector.",
+]
+
     reminders.forEach((line) => {
       addPageIfNeeded()
       const wrapped = doc.splitTextToSize(line, contentWidth)
@@ -883,10 +891,17 @@ export default function GeneratorPage() {
                     onChange={(e) => setFormData((p) => ({ ...p, availableFrom: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="minTerm">Min term (months)</Label>
-                  <Input id="minTerm" type="number" placeholder="12" value={formData.minTerm}
-                    onChange={(e) => setFormData((p) => ({ ...p, minTerm: e.target.value }))} />
-                </div>
+  <Label htmlFor="minTerm" className="flex items-center gap-2">
+    Min term (months)
+    <span className="text-[10px] uppercase font-bold bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">Note</span>
+  </Label>
+  <Input id="minTerm" type="number" placeholder="—" value={formData.minTerm}
+    onChange={(e) => setFormData((p) => ({ ...p, minTerm: e.target.value }))} />
+  <p className="text-[11px] text-muted-foreground">
+    Under the Renters' Rights Act 2025, all tenancies are now indefinite periodic. Tenants can give 2 months' notice at any time. Leave blank or use only if a specific arrangement applies.
+  </p>
+</div>
+
               </div>
 
               <div className="grid grid-cols-2 gap-4">

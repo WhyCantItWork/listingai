@@ -65,6 +65,16 @@ EXCLUSIONARY TENANT TYPES (high severity):
 • "non-smokers only" (smoking can be restricted in tenancy agreement, not pre-screened)
 • "mature tenants" / "young tenants" (age discrimination)
 
+RENTERS' RIGHTS ACT 2025 BREACHES (high severity — in force from 1 May 2026):
+• "No children" / "no kids" / "child-free home" / "no families" — banned under the new Act.
+• "No DSS" / "no benefits" / "no Universal Credit" / "no housing benefit" — banned (was already illegal, now codified).
+• "Offers over", "best and final offer", "rental bidding", "highest bidder", "competitive bids" — rental bidding is banned.
+• "Rent in advance", "6 months upfront", "12 months upfront", or any mention of multiple months' rent paid in advance — banned for new tenancies.
+• References to "fixed-term tenancy", "12-month contract", "Section 21 notice", "two-month notice from landlord" — obsolete; all assured tenancies are now indefinite periodic.
+• "Minimum term of 12 months" or any minimum tenancy term beyond what the new Act permits.
+
+
+
 BANNED FEES (high severity):
 • Any "admin fee", "referencing fee", "inventory fee", "check-in fee", "check-out fee", "renewal fee"
 • "Holding deposit" over 1 week's rent

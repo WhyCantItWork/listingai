@@ -23,7 +23,7 @@ export default function TermsPage() {
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">2. Accounts</h2>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
           <li>You must be 18 or over to use Tenancy.</li>
-          <li>You are responsible for keeping your login details secure.</li>
+          <li>You are responsible for keeping your email account secure, as Tenancy uses magic-link authentication for sign-in.</li>
           <li>You must provide accurate information when signing up.</li>
           <li>One account per person. Sharing accounts is not permitted.</li>
         </ul>
@@ -50,7 +50,7 @@ export default function TermsPage() {
         <p className="text-foreground">You agree not to:</p>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
           <li>Use Tenancy to generate fraudulent, misleading, or unlawful property listings.</li>
-          <li>Use the service to violate UK lettings law, including the Equality Act 2010, the Tenant Fees Act 2019, the Housing Act 1988, the Material Information requirements introduced in 2024, or Right to Rent obligations under the Immigration Act 2014.</li>
+          <li>Use the service to violate UK lettings law, including the Equality Act 2010, the Tenant Fees Act 2019, the Housing Act 1988, the Renters' Rights Act 2025, the Material Information requirements introduced in 2024, or Right to Rent obligations under the Immigration Act 2014.</li>
           <li>Publish listings containing language that discriminates against individuals based on protected characteristics, including DSS/benefits discrimination (illegal since 2020).</li>
           <li>Attempt to reverse-engineer, scrape, or abuse the service.</li>
           <li>Resell or redistribute access to your account.</li>
@@ -116,6 +116,7 @@ export default function TermsPage() {
   <li>the Equality Act 2010</li>
   <li>the Tenant Fees Act 2019</li>
   <li>the Housing Act 1988 (as amended)</li>
+  <li>the Renters' Rights Act 2025 (in force from 1 May 2026)</li>
   <li>the Material Information requirements introduced in 2024</li>
   <li>Right to Rent obligations under the Immigration Act 2014</li>
   <li>the Data Protection Act 2018 and UK GDPR</li>

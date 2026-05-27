@@ -128,21 +128,17 @@ export async function POST(request: NextRequest) {
     // Build per-variant config
     const variantConfigs: { tone: string; audience: string }[] = []
     if (forceTone) {
-      // Single variant regeneration with specific tone
       variantConfigs.push({ tone: forceTone, audience })
     } else if (variantsRequested === 1) {
       variantConfigs.push({ tone: body.tone || "professional", audience })
     } else {
-      // Auto-vary tones across variants
       const userTone = body.tone || "professional"
       const varietyPool: { tone: string; audience: string }[] = [
         { tone: userTone, audience },
       ]
-      // Add complementary tones
       const fallbacks = ["warm", "modern", "luxurious", "story", "concise"].filter(t => t !== userTone)
       for (let i = 1; i < variantsRequested; i++) {
         const tone = fallbacks[i - 1] || "professional"
-        // Vary audience too for diversity
         const altAudience = i === 1 ? "young-professional" : i === 2 ? "families" : "general"
         varietyPool.push({ tone, audience: altAudience })
       }
@@ -193,7 +189,7 @@ ${body.hasPartC ? `PART C
 
 TENANCY
 • Available from: ${body.availableFrom || "Immediately"}
-• Min term: ${body.minTerm || "12"} months
+• Min term: ${body.minTerm || "Not specified — indefinite periodic under Renters' Rights Act 2025"} months
 • Max tenants: ${body.maxTenants || "Not specified"}
 • Pets: ${body.petsPolicy || "Not specified"}
 • Smoking: ${body.smokingAllowed ? "Allowed" : "Not allowed"}
@@ -218,10 +214,17 @@ TENANCY TERMS
 RULES
 • Sound human, never templated. British English throughout.
 • Comply with Equality Act 2010 — no preferences for nationality, family makeup, age, religion, etc.
+• Comply with the Renters' Rights Act 2025 (in force from 1 May 2026):
+  – No language banning or discouraging children, families, or benefit recipients (now explicitly illegal).
+  – No mention of rental bidding, "offers over", "best and final offer", or competitive bidding — banned.
+  – No mention of rent paid months in advance or large upfront payments — restricted.
+  – No reference to fixed-term tenancies, "12-month contracts", or "Section 21" — tenancies are now indefinite periodic.
+  – Avoid stating a "minimum term" — under the new Act, tenants can give 2 months' notice at any time.
 • No banned phrases under Tenant Fees Act 2019 (no admin/referencing fees mentioned).
 • No subjective safety claims like "safe area".
 • No clichés: stunning, masterpiece, nestled, must-see, paradise, etc.
-${isMultiVariant ? `\nSEPARATOR: Between versions, output a single line that is exactly:\n---VARIANT---\n\nDo not output the separator before the first version or after the last version.` : ""}`
+${isMultiVariant ? `\nSEPARATOR: Between versions, output a single line that is exactly:\n---VARIANT---\n\nDo not output the separator before the first version or after the last version.` : ""}
+`
 
     const response = await getAnthropic().messages.create({
       model: "claude-haiku-4-5",
@@ -239,7 +242,6 @@ ${isMultiVariant ? `\nSEPARATOR: Between versions, output a single line that is 
       ? fullText.split(/---VARIANT---/i).map(s => s.trim()).filter(Boolean)
       : [fullText]
 
-    // Pair each listing with its tone/audience metadata
     const listings = rawListings.map((content, i) => ({
       content,
       tone: variantConfigs[i]?.tone || body.tone || "professional",
