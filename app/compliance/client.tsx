@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 
 interface Finding {
   phrase: string
@@ -62,21 +63,49 @@ export function ComplianceClient() {
     }
   }
 
-  const handleReplace = (finding: Finding) => {
-    const idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
-    if (idx === -1) return
+const handleReplace = (finding: Finding) => {
+  // Try exact match first
+  let idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
 
-    const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
-    const replacement = isRemoval ? "" : finding.alternative
-
-    const before = text.slice(0, idx)
-    const after = text.slice(idx + finding.phrase.length)
-
-    const newText = (before + replacement + after).replace(/  +/g, " ")
-
-    setText(newText)
-    setFindings((prev) => prev?.filter((f) => f !== finding) ?? null)
+  // If exact fails, try fuzzy match (collapse whitespace, ignore punctuation differences)
+  if (idx === -1) {
+    const fuzzyPhrase = finding.phrase.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ").trim()
+    const fuzzyText = text.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ")
+    const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
+    if (fuzzyIdx === -1) {
+      toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
+      return
+    }
+    // Map fuzzy index back to original — find approximate location
+    const words = finding.phrase.split(/\s+/)[0]
+    idx = text.toLowerCase().indexOf(words.toLowerCase())
+    if (idx === -1) {
+      toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
+      return
+    }
   }
+
+  const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
+  const replacement = isRemoval ? "" : finding.alternative
+
+  // Find the actual phrase boundary in original text
+  let endIdx = idx + finding.phrase.length
+  if (endIdx > text.length || text.toLowerCase().slice(idx, endIdx) !== finding.phrase.toLowerCase()) {
+    // Fuzzy fallback — try to find next punctuation or sentence boundary
+    const after = text.slice(idx)
+    const match = after.match(/^[^.!?]*[.!?]?/)
+    endIdx = match ? idx + match[0].length : idx + finding.phrase.length
+  }
+
+  const before = text.slice(0, idx)
+  const after = text.slice(endIdx)
+  const newText = (before + replacement + after).replace(/  +/g, " ")
+
+  setText(newText)
+  setFindings((prev) => prev?.filter((f) => f !== finding) ?? null)
+  toast.success(isRemoval ? "Phrase removed" : "Phrase replaced")
+}
+
 
   const handleReplaceAll = () => {
     if (!findings) return

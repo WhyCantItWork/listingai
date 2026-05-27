@@ -59,6 +59,8 @@ EXCLUSIONARY TENANT TYPES (high severity):
 • "professional couples" / "professionals only" / "working professionals"
 • "young professionals" / "mature professionals"
 • "couples only" / "single occupants only"
+• "perfect for couples" / "perfect for young professionals" / "perfect for [any demographic descriptor]" — implies preference, illegal under Equality Act
+• "without children" / "child-free" — illegal under Renters' Rights Act 2025
 • "no children" / "no kids" / "child-free"
 • "no DSS" / "no benefits" / "no Universal Credit" / "no UC" / "no housing benefit"
 • "British only" / "UK only" / "EU citizens preferred" / any nationality preference
