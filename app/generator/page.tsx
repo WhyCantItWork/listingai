@@ -228,7 +228,7 @@ export default function GeneratorPage() {
   const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
   const [savedVariants, setSavedVariants] = useState<number[]>([])
-  const [tier, setTier] = useState<"free" | "pro" | "lister" | "team">("free")
+  const [tier, setTier] = useState<"free" | "pro" | "lister">("free")
   const [usage, setUsage] = useState<{ used: number; limit: number | null }>({ used: 0, limit: 5 })
   const [variants, setVariants] = useState<Variant[]>([])
   const [activeVariant, setActiveVariant] = useState(0)
@@ -250,7 +250,7 @@ export default function GeneratorPage() {
       if (profile) {
         const now = new Date()
         setTier(profile.tier)
-        const tierLimits: Record<string, number | null> = { free: 5, pro: 100, lister: null, team: null }
+        const tierLimits: Record<string, number | null> = { free: 5, pro: 100, lister: null }
         const baseLimit = tierLimits[profile.tier] ?? null
 
         const bonusExpiresAt = profile.bonus_listings_expires_at
@@ -264,7 +264,7 @@ export default function GeneratorPage() {
           limit: baseLimit === null ? null : baseLimit + activeBonus,
         })
 
-        const tierCaps: Record<string, number | null> = { free: 0, pro: 50, lister: null, team: null }
+        const tierCaps: Record<string, number | null> = { free: 0, pro: 50, lister: null }
         const baseCapForVault = tierCaps[profile.tier] ?? null
         let bonusVault = 0
         if (profile.bonus_vault_expires_at && new Date(profile.bonus_vault_expires_at) > now) {
@@ -627,6 +627,16 @@ export default function GeneratorPage() {
   "• Discriminating against tenants with children or those receiving benefits is illegal.",
   "• Register with the new Private Rented Sector Database when it goes live.",
   "• Comply with the new Decent Homes Standard for the private rented sector.",
+  "• Landlord cannot use moving-in (Ground 1) or selling (Ground 1A) grounds in the first 12 months of a tenancy.",
+  "• Landlord notice for moving-in or selling grounds is now 4 months.",
+  "• Re-letting or re-marketing the property within 12 months of using Grounds 1 or 1A is an offence.",
+  "• Rent can only be increased once per year via a Section 13 notice, giving 2 months' notice, at market rate.",
+  "• Tenants can end the tenancy at any time with 2 months' written notice.",
+  "• Mandatory rent arrears threshold for possession is 3 months, with 4 weeks' notice (Ground 8).",
+  "• Pet requests cannot be unreasonably refused — consider each request on its merits.",
+  "• Awaab's Law applies: serious hazards (damp, mould) must be addressed within statutory timescales.",
+  "• Civil penalties: up to £7,000 for initial breaches; up to £40,000 or criminal prosecution for serious or repeat breaches.",
+  "• Rent repayment orders can be claimed for up to 24 months of rent for qualifying offences.",
 ]
 
     reminders.forEach((line) => {
@@ -995,7 +1005,7 @@ export default function GeneratorPage() {
                     <SelectItem value="3">3 versions to compare</SelectItem>
                   </SelectContent>
                 </Select>
-                {(tier === "lister" || tier === "team") && formData.variants > 1 && (
+                {tier === "lister" && formData.variants > 1 && (
                   <p className="text-xs text-muted-foreground">
                     Each version uses a different tone and audience automatically. You can change tone or audience on any version below to regenerate it.
                   </p>
@@ -1036,7 +1046,7 @@ export default function GeneratorPage() {
             )}
             {usage.limit === null && tier !== "free" && (
               <div className="text-xs text-emerald-600 dark:text-emerald-400 text-center pb-2 pt-2 border-t border-border">
-                {usage.used} listings generated this month · Unlimited on {tier === "lister" ? "Lister" : "Team"}
+                {usage.used} listings generated this month · Unlimited on Lister
               </div>
             )}
 

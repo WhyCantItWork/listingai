@@ -95,9 +95,10 @@ const faqs: FAQ[] = [
     question: "Are the listings really compliant with UK law?",
 answer: (
   <>
-    Tenancy is built around UK lettings rules, including the <strong>Renters' Rights Act 2025</strong> (in force from 1 May 2026), the 2024 Material Information requirements, the Equality Act 2010, the Tenant Fees Act 2019, and Right to Rent. Every generated listing includes a full MI table, uses the new indefinite periodic tenancy model, and avoids language that breaches these laws. The compliance checker catches issues if you paste your own text — including rental bidding, rent in advance, and the new anti-discrimination protections for children and benefit recipients. That said, you should always review listings before publishing — Tenancy is a tool, not a substitute for your professional judgement.
+    Tenancy is built around UK lettings rules, including the <strong>Renters' Rights Act 2025</strong>, the 2024 Material Information requirements, the Equality Act 2010, the Tenant Fees Act 2019, and Right to Rent. Every generated listing uses the new indefinite periodic tenancy model and avoids language that breaches these laws. The compliance checker catches issues if you paste your own text — including rental bidding, rent in advance, anti-discrimination protections for children and benefit recipients, the new 12-month protected period for landlord-occupier and selling grounds, the Section 13 rent increase process, blanket no-pets phrasing (which is no longer permitted — requests must be considered case-by-case), and timescales under Awaab's Law for serious hazards like damp and mould. Tenancy is a tool, not a substitute for your professional judgement — always review listings before publishing, and consult a solicitor for complex cases.
   </>
 ),
+
 
   },
   {

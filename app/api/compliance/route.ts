@@ -14,16 +14,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "You must be logged in." }, { status: 401 })
     }
 
-    // Gate to Lister/Team
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tier")
-      .eq("id", user.id)
-      .single()
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("tier, compliance_used, compliance_reset_at")
+  .eq("id", user.id)
+  .single()
 
-    if (!profile || (profile.tier !== "lister" && profile.tier !== "team")) {
-      return NextResponse.json({ error: "Compliance Checker requires the Lister plan." }, { status: 403 })
-    }
+if (!profile) {
+  return NextResponse.json({ error: "Profile not found." }, { status: 404 })
+}
+
+const COMPLIANCE_LIMITS: Record<string, number | null> = {
+  free: 0,
+  pro: 75,
+  lister: null,
+}
+
+const complianceLimit = COMPLIANCE_LIMITS[profile.tier] ?? 0
+
+if (complianceLimit === 0) {
+  return NextResponse.json(
+    { error: "Compliance Checker requires Pro (75/month) or Lister (unlimited). Upgrade to unlock." },
+    { status: 403 }
+  )
+}
+
+const resetAt = profile.compliance_reset_at ? new Date(profile.compliance_reset_at) : new Date()
+const daysSinceReset = (Date.now() - resetAt.getTime()) / (1000 * 60 * 60 * 24)
+let complianceUsed = profile.compliance_used || 0
+if (daysSinceReset >= 30) {
+  await supabase
+    .from("profiles")
+    .update({ compliance_used: 0, compliance_reset_at: new Date().toISOString() })
+    .eq("id", user.id)
+  complianceUsed = 0
+}
+
+if (complianceLimit !== null && complianceUsed >= complianceLimit) {
+  return NextResponse.json(
+    {
+      error: "limit_reached",
+      message: `You've used your ${complianceLimit} compliance scans this month. Upgrade to Lister for unlimited scans, or wait until your monthly reset.`,
+      used: complianceUsed,
+      limit: complianceLimit,
+    },
+    { status: 402 }
+  )
+}
+
 
     const { text } = await request.json()
 
@@ -74,6 +112,12 @@ RENTERS' RIGHTS ACT 2025 BREACHES (high severity — in force from 1 May 2026):
 • "Rent in advance", "6 months upfront", "12 months upfront", or any mention of multiple months' rent paid in advance — banned for new tenancies.
 • References to "fixed-term tenancy", "12-month contract", "Section 21 notice", "two-month notice from landlord" — obsolete; all assured tenancies are now indefinite periodic.
 • "Minimum term of 12 months" or any minimum tenancy term beyond what the new Act permits.
+• "Landlord may move in at any time" / "Landlord reserves right to occupy" — flag: 12-month protected period applies, 4 months' notice required.
+• "Rent review every [X] months" / "Rent review clause" / "Rent may be increased at landlord's discretion" — only one Section 13 increase per year permitted.
+• "No pets under any circumstances" / "Strict no-pets policy" — landlords must consider requests reasonably; blanket refusal is now legally questionable.
+• "Verbal agreement" / "Informal letting" / "No written contract required" — all new tenancies need a written agreement with prescribed information.
+• "Quick eviction for late rent" / "Immediate possession for arrears" — mandatory arrears threshold is now 3 months with 4 weeks' notice.
+• "Property let by [X] / managed by [X]" without ombudsman membership claim — once live, landlord ombudsman membership is mandatory; marketing without it is an offence.
 
 
 
@@ -203,7 +247,18 @@ Output ONLY the JSON array. No preamble, no markdown code fences. Start with [ a
       return NextResponse.json({ error: "Compliance scan returned an unexpected format. Please try again." }, { status: 500 })
     }
 
-    return NextResponse.json({ findings })
+if (complianceLimit !== null) {
+  await supabase
+    .from("profiles")
+    .update({ compliance_used: complianceUsed + 1 })
+    .eq("id", user.id)
+}
+
+return NextResponse.json({
+  findings,
+  usage: complianceLimit === null ? null : { used: complianceUsed + 1, limit: complianceLimit },
+})
+
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error"
     console.error("Compliance error:", msg)

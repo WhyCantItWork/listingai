@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-type Tier = "free" | "pro" | "lister" | "team"
+type Tier = "free" | "pro" | "lister"
 
 interface Profile {
   tier: Tier
@@ -36,14 +36,12 @@ const TIER_LIMITS: Record<Tier, number | null> = {
   free: 5,
   pro: 100,
   lister: null,
-  team: null,
 }
 
 const VAULT_CAPS: Record<Tier, number | null> = {
   free: 0,
   pro: 50,
   lister: null,
-  team: null,
 }
 
 const LISTING_TOPUPS = [
@@ -83,11 +81,9 @@ function AccountPageContent() {
   const [showCancelBanner, setShowCancelBanner] = useState(false)
   const [vaultUsed, setVaultUsed] = useState(0)
 
-  // Change email state
   const [newEmail, setNewEmail] = useState("")
   const [emailLoading, setEmailLoading] = useState(false)
 
-  // Delete account state
   const [deleteConfirm, setDeleteConfirm] = useState("")
   const [deleting, setDeleting] = useState(false)
 
@@ -259,7 +255,6 @@ function AccountPageContent() {
         <p className="text-muted-foreground mt-1">Manage your subscription, top-ups, and account settings.</p>
       </div>
 
-      {/* Success / cancel banners */}
       {showSuccessBanner && (
         <Card className="border-emerald-500/40 bg-emerald-500/5">
           <CardContent className="flex items-center justify-between gap-3 py-4">
@@ -268,7 +263,7 @@ function AccountPageContent() {
               <div className="text-sm">
                 <p className="font-medium text-foreground">Top-up activated</p>
                 <p className="text-muted-foreground mt-1">
-                  Your extra listings are ready to use. They'll stay active for 30 days from purchase.
+                  Your extra listings are ready to use. They&apos;ll stay active for 30 days from purchase.
                 </p>
               </div>
             </div>
@@ -289,7 +284,6 @@ function AccountPageContent() {
         </Card>
       )}
 
-      {/* Account details */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Account details</CardTitle>
@@ -309,7 +303,6 @@ function AccountPageContent() {
         </CardContent>
       </Card>
 
-      {/* Usage */}
       {tier !== "free" && (
         <Card>
           <CardHeader>
@@ -396,7 +389,6 @@ function AccountPageContent() {
         </Card>
       )}
 
-      {/* Listing top-ups */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -411,17 +403,17 @@ function AccountPageContent() {
           {tier === "free" ? (
             <div className="rounded-md border border-border bg-muted/30 p-4 text-sm">
               <p className="text-muted-foreground">
-                Top-ups are available on Pro, Lister, and Team plans.{" "}
+                Top-ups are available on Pro and Lister plans.{" "}
                 <button onClick={() => router.push("/pricing")} className="text-primary underline">
                   Upgrade to a paid plan
                 </button>{" "}
                 to unlock them.
               </p>
             </div>
-          ) : tier === "lister" || tier === "team" ? (
+          ) : tier === "lister" ? (
             <div className="rounded-md border border-border bg-muted/30 p-4 text-sm">
               <p className="text-muted-foreground">
-                You're on {tier === "lister" ? "Lister" : "Team"} with unlimited listings — no top-ups needed.
+                You&apos;re on Lister with unlimited listings — no top-ups needed.
               </p>
             </div>
           ) : (
@@ -468,7 +460,6 @@ function AccountPageContent() {
         </CardContent>
       </Card>
 
-      {/* Vault top-ups */}
       {tier === "pro" && (
         <Card>
           <CardHeader>
@@ -510,7 +501,6 @@ function AccountPageContent() {
         </Card>
       )}
 
-      {/* Change Email */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -518,7 +508,7 @@ function AccountPageContent() {
             Change email
           </CardTitle>
           <CardDescription>
-            You'll receive a confirmation link at the new address. The change takes effect once you click it.
+            You&apos;ll receive a confirmation link at the new address. The change takes effect once you click it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -543,7 +533,6 @@ function AccountPageContent() {
         </CardContent>
       </Card>
 
-      {/* Subscription management */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Subscription</CardTitle>
@@ -552,7 +541,7 @@ function AccountPageContent() {
           {tier === "free" ? (
             <>
               <p className="text-sm text-muted-foreground">
-                You're on the Free plan. Upgrade to unlock more listings, vault storage, A/B testing, and more.
+                You&apos;re on the Free plan. Upgrade to unlock more listings, vault storage, A/B testing, and more.
               </p>
               <Button onClick={() => router.push("/pricing")} className="w-full sm:w-auto">
                 See plans
@@ -576,7 +565,6 @@ function AccountPageContent() {
         </CardContent>
       </Card>
 
-      {/* Sign out */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Sign out</CardTitle>
@@ -589,7 +577,6 @@ function AccountPageContent() {
         </CardContent>
       </Card>
 
-      {/* Delete Account */}
       <Card className="border-rose-500/30">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2 text-rose-500">
@@ -597,7 +584,7 @@ function AccountPageContent() {
             Delete account
           </CardTitle>
           <CardDescription>
-            Permanently delete your account, all your saved listings, and your subscription. This can't be undone.
+            Permanently delete your account, all your saved listings, and your subscription. This can&apos;t be undone.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -671,5 +658,4 @@ export default function AccountPage() {
     </Suspense>
   )
 }
-
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Sparkles, Building2, Zap, Users } from 'lucide-react'
+import { Check, Sparkles, Building2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -54,9 +54,9 @@ const plans: Plan[] = [
   },
   {
     name: 'Pro',
-    monthlyPrice: '£29',
-    yearlyPrice: '£289',
-    monthlyEquivalent: '£24',
+    monthlyPrice: '£10',
+    yearlyPrice: '£100',
+    monthlyEquivalent: '£8.33',
     description: 'For working letting agents',
     icon: Building2,
     features: [
@@ -80,9 +80,9 @@ const plans: Plan[] = [
   },
   {
     name: 'Lister',
-    monthlyPrice: '£59',
-    yearlyPrice: '£589',
-    monthlyEquivalent: '£49',
+    monthlyPrice: '£25',
+    yearlyPrice: '£250',
+    monthlyEquivalent: '£20.83',
     description: 'For power users running listings daily',
     icon: Zap,
     features: [
@@ -100,33 +100,8 @@ const plans: Plan[] = [
     highlighted: true,
     badge: 'Most Popular',
   },
-  {
-    name: 'Team',
-    monthlyPrice: '£90',
-    yearlyPrice: '£897',
-    monthlyEquivalent: '£75',
-    description: 'For agencies and brokerages',
-    icon: Users,
-    features: [
-      'Everything in Lister',
-      'Priority email support',
-      'Early access to new features',
-    ],
-    comingSoon: [
-      'Multiple team member seats',
-      'Shared team Vault',
-      'Brand voice training',
-      'Custom templates',
-      'Analytics dashboard',
-      'API access',
-      'Dedicated account manager',
-    ],
-    notIncluded: [],
-    cta: 'Subscribe to Team',
-    tier: 'team',
-    highlighted: false,
-  },
 ]
+
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
@@ -150,20 +125,17 @@ export default function PricingPage() {
     }
 
     // Pick the price ID based on the chosen interval
-    const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: string }> = {
-      pro: {
-        monthly: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
-        yearly: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
-      },
-      lister: {
-        monthly: process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID,
-        yearly: process.env.NEXT_PUBLIC_STRIPE_LISTER_YEARLY_PRICE_ID,
-      },
-      team: {
-        monthly: process.env.NEXT_PUBLIC_STRIPE_TEAM_PRICE_ID,
-        yearly: process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID,
-      },
-    }
+const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: string }> = {
+  pro: {
+    monthly: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+    yearly: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
+  },
+  lister: {
+    monthly: process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID,
+    yearly: process.env.NEXT_PUBLIC_STRIPE_LISTER_YEARLY_PRICE_ID,
+  },
+}
+
 
     const priceId = priceIdMap[tier][interval]
     if (!priceId) {
@@ -243,7 +215,7 @@ export default function PricingPage() {
 </div>
 
 
-      <div className="mx-auto mt-12 grid max-w-6xl gap-6 lg:grid-cols-4">
+      <div className="mx-auto mt-12 grid max-w-5xl gap-6 lg:grid-cols-3">
         {plans.map((plan) => {
           const isFree = plan.tier === 'free'
           const displayPrice = interval === 'yearly' && !isFree ? plan.yearlyPrice : plan.monthlyPrice

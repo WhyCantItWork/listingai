@@ -10,7 +10,6 @@ const TIER_LIMITS: Record<string, number | null> = {
   free: 5,
   pro: 100,
   lister: null,
-  team: null,
 }
 
 const toneDescriptions: Record<string, string> = {
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     // Pro+ gets length and audience options
     const hasProFeatures = profile.tier !== "free"
-    const hasMultipleVariants = profile.tier === "lister" || profile.tier === "team"
+    const hasMultipleVariants = profile.tier === "lister"
     const length = hasProFeatures && body.length ? body.length : "medium"
     const audience = hasProFeatures && body.audience ? body.audience : "general"
     const variantsRequested = hasMultipleVariants && body.variants ? Math.min(body.variants, 3) : 1
@@ -222,6 +221,10 @@ RULES
   – Avoid stating a "minimum term" — under the new Act, tenants can give 2 months' notice at any time.
 • No banned phrases under Tenant Fees Act 2019 (no admin/referencing fees mentioned).
 • No subjective safety claims like "safe area".
+• Do not write rent review clauses or any language allowing rent increases mid-tenancy outside the Section 13 process.
+• Do not write blanket "no pets" — phrase as "pets considered on application" if the landlord wants to retain discretion.
+• Do not promise quick possession for arrears — the mandatory threshold is 3 months with 4 weeks' notice.
+• Do not imply landlord can recover the property at short notice — Grounds 1 and 1A require 4 months' notice and cannot be used in the first 12 months.
 • No clichés: stunning, masterpiece, nestled, must-see, paradise, etc.
 ${isMultiVariant ? `\nSEPARATOR: Between versions, output a single line that is exactly:\n---VARIANT---\n\nDo not output the separator before the first version or after the last version.` : ""}
 `

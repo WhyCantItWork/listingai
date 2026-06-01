@@ -22,14 +22,14 @@ export function ComplianceClient() {
   const [findings, setFindings] = useState<Finding[] | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-  const pending = localStorage.getItem("tenancy-pending-compliance")
-  if (pending) {
-    setText(pending)
-    localStorage.removeItem("tenancy-pending-compliance")
-  }
-}, [])
 
+  useEffect(() => {
+    const pending = localStorage.getItem("tenancy-pending-compliance")
+    if (pending) {
+      setText(pending)
+      localStorage.removeItem("tenancy-pending-compliance")
+    }
+  }, [])
 
   const runCheck = async () => {
     if (text.trim().length < 20) {
@@ -63,102 +63,81 @@ export function ComplianceClient() {
     }
   }
 
-const handleReplace = (finding: Finding) => {
-  // Try exact match first
-  let idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
+  const handleReplace = (finding: Finding) => {
+    let idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
 
-  // If exact fails, try fuzzy match (collapse whitespace, ignore punctuation differences)
-  if (idx === -1) {
-    const fuzzyPhrase = finding.phrase.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ").trim()
-    const fuzzyText = text.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ")
-    const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
-    if (fuzzyIdx === -1) {
-      toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
-      return
-    }
-    // Map fuzzy index back to original — find approximate location
-    const words = finding.phrase.split(/\s+/)[0]
-    idx = text.toLowerCase().indexOf(words.toLowerCase())
     if (idx === -1) {
-      toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
-      return
+      const fuzzyPhrase = finding.phrase.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ").trim()
+      const fuzzyText = text.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ")
+      const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
+      if (fuzzyIdx === -1) {
+        toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
+        return
+      }
+      const words = finding.phrase.split(/\s+/)[0]
+      idx = text.toLowerCase().indexOf(words.toLowerCase())
+      if (idx === -1) {
+        toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
+        return
+      }
     }
+
+    const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
+    const replacement = isRemoval ? "" : finding.alternative
+
+    let endIdx = idx + finding.phrase.length
+    if (endIdx > text.length || text.toLowerCase().slice(idx, endIdx) !== finding.phrase.toLowerCase()) {
+      const after = text.slice(idx)
+      const match = after.match(/^[^.!?]*[.!?]?/)
+      endIdx = match ? idx + match[0].length : idx + finding.phrase.length
+    }
+
+    const before = text.slice(0, idx)
+    const after = text.slice(endIdx)
+    let newText = before + replacement + after
+
+    if (isRemoval) {
+      newText = newText.replace(/\s+([.,;:!?])\s+/g, "$1 ")
+      newText = newText.replace(/([.!?])\s*[,;:]\s*/g, "$1 ")
+      newText = newText.replace(/([.,;:!?])\s*[.,;:!?]+/g, "$1")
+      newText = newText.replace(/([.!?])\s+([.,;:])/g, "$1")
+      newText = newText.replace(/,\s*\./g, ".")
+      newText = newText.replace(/\s+([.,;:!?])/g, "$1")
+    }
+
+    newText = newText.replace(/  +/g, " ").replace(/\n /g, "\n").replace(/ \n/g, "\n")
+    newText = newText.replace(/(?:^|[.!?]\s+)\.\s+/g, " ")
+    newText = newText.trim()
+
+    setText(newText)
+    setFindings((prev) => prev?.filter((f) => f !== finding) ?? null)
+    toast.success(isRemoval ? "Phrase removed" : "Phrase replaced")
   }
 
-  const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
-  const replacement = isRemoval ? "" : finding.alternative
+  const handleReplaceAll = () => {
+    if (!findings) return
+    let newText = text
+    findings.forEach((f) => {
+      const idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
+      if (idx === -1) return
+      const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
+      const replacement = isRemoval ? "" : f.alternative
+      newText = newText.slice(0, idx) + replacement + newText.slice(idx + f.phrase.length)
+    })
 
-  // Find the actual phrase boundary in original text
-  let endIdx = idx + finding.phrase.length
-  if (endIdx > text.length || text.toLowerCase().slice(idx, endIdx) !== finding.phrase.toLowerCase()) {
-    // Fuzzy fallback — try to find next punctuation or sentence boundary
-    const after = text.slice(idx)
-    const match = after.match(/^[^.!?]*[.!?]?/)
-    endIdx = match ? idx + match[0].length : idx + finding.phrase.length
+    newText = newText.replace(/\s+([.,;:!?])\s+/g, "$1 ")
+    newText = newText.replace(/([.!?])\s*[,;:]\s*/g, "$1 ")
+    newText = newText.replace(/([.,;:!?])\s*[.,;:!?]+/g, "$1")
+    newText = newText.replace(/([.!?])\s+([.,;:])/g, "$1")
+    newText = newText.replace(/,\s*\./g, ".")
+    newText = newText.replace(/\s+([.,;:!?])/g, "$1")
+    newText = newText.replace(/  +/g, " ").replace(/\n /g, "\n").replace(/ \n/g, "\n")
+    newText = newText.replace(/(?:^|[.!?]\s+)\.\s+/g, " ")
+    newText = newText.trim()
+
+    setText(newText)
+    setFindings([])
   }
-
-  const before = text.slice(0, idx)
-  const after = text.slice(endIdx)
-let newText = before + replacement + after
-
-// Smart cleanup when removing a phrase
-if (isRemoval) {
-  // Remove orphaned punctuation left behind: " , ", " . ", " ; ", etc.
-  newText = newText.replace(/\s+([.,;:!?])\s+/g, "$1 ")
-  // Remove leading punctuation at start of sentences/clauses
-  newText = newText.replace(/([.!?])\s*[,;:]\s*/g, "$1 ")
-  // Remove double punctuation: ".." "., " ", ." ",,"
-  newText = newText.replace(/([.,;:!?])\s*[.,;:!?]+/g, "$1")
-  // Remove punctuation directly after another sentence end: ". ."
-  newText = newText.replace(/([.!?])\s+([.,;:])/g, "$1")
-  // Remove trailing comma before period: "word,. " → "word. "
-  newText = newText.replace(/,\s*\./g, ".")
-  // Remove space before punctuation
-  newText = newText.replace(/\s+([.,;:!?])/g, "$1")
-}
-
-// Always collapse multiple spaces and trim line edges
-newText = newText.replace(/  +/g, " ").replace(/\n /g, "\n").replace(/ \n/g, "\n")
-
-// Clean up empty sentences (just a period and space)
-newText = newText.replace(/(?:^|[.!?]\s+)\.\s+/g, " ")
-
-// Trim
-newText = newText.trim()
-
-
-  setText(newText)
-  setFindings((prev) => prev?.filter((f) => f !== finding) ?? null)
-  toast.success(isRemoval ? "Phrase removed" : "Phrase replaced")
-}
-
-
-const handleReplaceAll = () => {
-  if (!findings) return
-  let newText = text
-  findings.forEach((f) => {
-    const idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
-    if (idx === -1) return
-    const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
-    const replacement = isRemoval ? "" : f.alternative
-    newText = newText.slice(0, idx) + replacement + newText.slice(idx + f.phrase.length)
-  })
-
-  // Smart cleanup
-  newText = newText.replace(/\s+([.,;:!?])\s+/g, "$1 ")
-  newText = newText.replace(/([.!?])\s*[,;:]\s*/g, "$1 ")
-  newText = newText.replace(/([.,;:!?])\s*[.,;:!?]+/g, "$1")
-  newText = newText.replace(/([.!?])\s+([.,;:])/g, "$1")
-  newText = newText.replace(/,\s*\./g, ".")
-  newText = newText.replace(/\s+([.,;:!?])/g, "$1")
-  newText = newText.replace(/  +/g, " ").replace(/\n /g, "\n").replace(/ \n/g, "\n")
-  newText = newText.replace(/(?:^|[.!?]\s+)\.\s+/g, " ")
-  newText = newText.trim()
-
-  setText(newText)
-  setFindings([])
-}
-
 
   const severityColor = (s: Finding["severity"]) => {
     if (s === "high") return "border-rose-500/50 bg-rose-500/10 text-rose-600 dark:text-rose-400"
@@ -179,7 +158,6 @@ const handleReplaceAll = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        {/* Input */}
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
@@ -224,7 +202,6 @@ const handleReplaceAll = () => {
           </CardContent>
         </Card>
 
-        {/* Results */}
         <Card className="border-border bg-card">
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -285,12 +262,11 @@ const handleReplaceAll = () => {
                   Your listing looks compliant.
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-  No UK lettings compliance risks detected. You can publish this listing.
-</p>
-<p className="mt-3 text-xs text-muted-foreground/70 max-w-xs">
-  💡 No need to run further checks — this listing is good to go.
-</p>
-
+                  No UK lettings compliance risks detected. You can publish this listing.
+                </p>
+                <p className="mt-3 text-xs text-muted-foreground/70 max-w-xs">
+                  💡 No need to run further checks — this listing is good to go.
+                </p>
               </div>
             )}
 
@@ -337,21 +313,16 @@ const handleReplaceAll = () => {
         </Card>
       </div>
 
-      {/* Info section */}
       <Card className="mt-8 border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">About this scan</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-3">
           <p>
-  This tool uses AI to analyse listings against UK lettings law, including the <strong>Renters' Rights Act 2025</strong> (in force from 1 May 2026), the <strong>Equality Act 2010</strong>, the <strong>Tenant Fees Act 2019</strong>, and the <strong>Tenancy Deposit Scheme</strong> rules. It also catches DSS/benefits discrimination, which has been illegal since 2020 (Tyler v Paul Carr).
-</p>
-<p>
-  Findings cover the new tenancy reforms (rental bidding bans, rent-in-advance restrictions, indefinite periodic tenancies), banned fees, deposit cap violations, Right to Rent language, and discrimination based on protected characteristics including children and benefit recipients.
-</p>
-
-          <p className="text-xs">
-            <strong>Disclaimer:</strong> This is an automated tool and not a substitute for legal advice. Always consult a qualified property law professional if you're unsure about a listing.
+            This tool uses AI to flag common breaches in UK lettings listings — including the <strong>Renters&apos; Rights Act 2025</strong>, <strong>Equality Act 2010</strong>, <strong>Tenant Fees Act 2019</strong>, and <strong>Tenancy Deposit Scheme</strong> rules. It catches frequent issues like DSS/benefits discrimination, rental bidding language, banned admin fees, and deposit cap violations.
+          </p>
+          <p>
+            <strong>This is not legal advice.</strong> Tenancy is a writing checker, not a solicitor. For complex situations or genuine uncertainty, consult a qualified property law professional or check official guidance from <a href="[gov.uk](https://gov.uk)" target="_blank" rel="noopener" className="underline">gov.uk</a>, <a href="[england.shelter.org.uk](https://england.shelter.org.uk)" target="_blank" rel="noopener" className="underline">Shelter</a>, or the <a href="[nrla.org.uk](https://nrla.org.uk)" target="_blank" rel="noopener" className="underline">NRLA</a>.
           </p>
         </CardContent>
       </Card>

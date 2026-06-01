@@ -51,6 +51,10 @@ export default function LandingPage() {
               Tenancy generates compliant property descriptions, Material Information tables,
               and tenancy packs for UK letting agents. Built for Rightmove, Zoopla, and OnTheMarket — out of the box.
             </p>
+            <p className="text-sm text-muted-foreground">
+  Updated for the Renters' Rights Act 2025 — covers the new tenancy model, rental bidding ban, rent in advance restrictions, and anti-discrimination protections.
+</p>
+
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link href="/generator">
