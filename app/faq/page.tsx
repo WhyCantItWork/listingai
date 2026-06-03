@@ -13,13 +13,12 @@ interface FAQ {
 }
 
 const faqs: FAQ[] = [
-  // Getting started
   {
     category: "Getting started",
     question: "What is Tenancy?",
     answer: (
       <>
-        Tenancy is an AI tool built for UK letting agents. It generates compliant property listing descriptions, scans for legal issues like discriminatory language or banned fees, and produces full Material Information packs ready for Rightmove, Zoopla, and OnTheMarket.
+        Tenancy is an AI tool built for UK letting agents. It generates property listing descriptions, scans for risky language that often breaches UK lettings law, and produces full Material Information packs ready for Rightmove, Zoopla, and OnTheMarket.
       </>
     ),
   },
@@ -28,7 +27,7 @@ const faqs: FAQ[] = [
     question: "Who is Tenancy for?",
     answer: (
       <>
-        UK letting agents and small lettings agencies. Whether you're a sole trader managing 5 properties or an agency handling 200, Tenancy speeds up the listing process and helps you stay compliant with UK lettings law.
+        UK letting agents and small lettings agencies. Whether you&apos;re a sole trader managing 5 properties or an agency handling 200, Tenancy speeds up the listing process and helps you avoid common compliance breaches.
       </>
     ),
   },
@@ -37,18 +36,17 @@ const faqs: FAQ[] = [
     question: "Do I need any property law knowledge to use Tenancy?",
     answer: (
       <>
-        No. Tenancy bakes UK lettings law into every listing — Material Information requirements, Equality Act 2010, Tenant Fees Act 2019, Right to Rent. The compliance checker also flags risky language so you don't accidentally publish something illegal. That said, Tenancy isn't a substitute for legal advice — for genuinely complex situations, consult a solicitor.
+        No. Tenancy is built around UK lettings rules — Material Information requirements, Equality Act 2010, Tenant Fees Act 2019, Right to Rent, and the Renters&apos; Rights Act 2025. The compliance checker flags risky language so you don&apos;t accidentally publish something illegal. <strong>That said, Tenancy is not legal advice.</strong> For complex situations, consult a solicitor or check official guidance from the NRLA, Shelter, or gov.uk.
       </>
     ),
   },
 
-  // Plans & pricing
   {
     category: "Plans & pricing",
-    question: "What's the difference between Free, Pro, Lister, and Team?",
+    question: "What's the difference between Free, Pro, and Lister?",
     answer: (
       <>
-        <strong>Free</strong> gives you 5 listings/month with basic features. <strong>Pro</strong> (£29/mo) gives 100 listings, vault storage for 50 listings, and PDF export. <strong>Lister</strong> (£59/mo) gives unlimited listings, unlimited vault storage, A/B testing, and the compliance checker. <strong>Team</strong> (£90/mo) is for agencies — currently the same as Lister with team features rolling out soon.
+        <strong>Free</strong> gives you 5 listings/month with basic features. <strong>Pro</strong> (£10/mo) gives 100 listings, 75 compliance scans per month, up to 2 variants per generation, vault storage for 50 listings, and PDF export. <strong>Lister</strong> (£25/mo) gives unlimited listings, unlimited compliance scans, up to 3 variants, A/B testing sandbox, and unlimited vault storage.
       </>
     ),
   },
@@ -57,7 +55,7 @@ const faqs: FAQ[] = [
     question: "How does annual billing work?",
     answer: (
       <>
-        Pay yearly and you get 17% off — that's two months free per year. Same features, just billed annually instead of monthly. You can switch between monthly and yearly anytime via the billing portal.
+        Pay yearly and you get roughly 17% off — two months free per year. Same features, just billed annually instead of monthly. You can switch between monthly and yearly anytime via the billing portal.
       </>
     ),
   },
@@ -66,7 +64,7 @@ const faqs: FAQ[] = [
     question: "Can I cancel anytime?",
     answer: (
       <>
-        Yes. Go to your Account page, click "Manage subscription", and cancel from the Stripe portal. You'll keep access until the end of your current billing period — no early-termination charges, no hassle.
+        Yes. Go to your Account page, click &ldquo;Manage subscription&rdquo;, and cancel from the Stripe portal. You&apos;ll keep access until the end of your current billing period — no early-termination charges, no hassle.
       </>
     ),
   },
@@ -75,31 +73,28 @@ const faqs: FAQ[] = [
     question: "Do you offer refunds?",
     answer: (
       <>
-        We don't pro-rate refunds for partial months, but you keep access until your billing period ends. If something goes seriously wrong, email us at vr047836@gmail.com and we'll sort it out.
+        We don&apos;t pro-rate refunds for partial months, but you keep access until your billing period ends. If something goes seriously wrong, email us at vr047836@gmail.com and we&apos;ll sort it out.
       </>
     ),
   },
 
-  // Listings
   {
     category: "Listings & generation",
     question: "What counts as one listing?",
     answer: (
       <>
-        Each time you click "Generate tenancy listing" counts as one listing — even if you generate 3 versions at once on Lister, that's still one usage. Regenerating a single version with a different tone also counts as one listing.
+        Each time you click &ldquo;Generate tenancy listing&rdquo; counts as one listing — even if you generate 2 or 3 variants at once, that&apos;s still one usage. Regenerating a single variant with a different tone also counts as one listing.
       </>
     ),
   },
   {
     category: "Listings & generation",
     question: "Are the listings really compliant with UK law?",
-answer: (
-  <>
-    Tenancy is built around UK lettings rules, including the <strong>Renters' Rights Act 2025</strong>, the 2024 Material Information requirements, the Equality Act 2010, the Tenant Fees Act 2019, and Right to Rent. Every generated listing uses the new indefinite periodic tenancy model and avoids language that breaches these laws. The compliance checker catches issues if you paste your own text — including rental bidding, rent in advance, anti-discrimination protections for children and benefit recipients, the new 12-month protected period for landlord-occupier and selling grounds, the Section 13 rent increase process, blanket no-pets phrasing (which is no longer permitted — requests must be considered case-by-case), and timescales under Awaab's Law for serious hazards like damp and mould. Tenancy is a tool, not a substitute for your professional judgement — always review listings before publishing, and consult a solicitor for complex cases.
-  </>
-),
-
-
+    answer: (
+      <>
+        Tenancy is built to help you avoid the most common breaches in UK lettings law — including the <strong>Renters&apos; Rights Act 2025</strong>, the 2024 Material Information requirements, the Equality Act 2010, the Tenant Fees Act 2019, and Right to Rent. It flags risky phrasing like &ldquo;no DSS&rdquo;, &ldquo;12-month minimum&rdquo;, rental bidding language, blanket no-pets clauses, and other patterns that have caused complaints or fines. <strong>This is not legal advice.</strong> Tenancy is a checker and a writing tool — not a substitute for a solicitor, the <a href="[nrla.org.uk](https://nrla.org.uk)" target="_blank" rel="noopener" className="text-primary underline">NRLA</a>, or official guidance. For anything genuinely uncertain, consult a qualified property law professional or check <a href="[gov.uk](https://gov.uk)" target="_blank" rel="noopener" className="text-primary underline">gov.uk</a> and <a href="[england.shelter.org.uk](https://england.shelter.org.uk)" target="_blank" rel="noopener" className="text-primary underline">Shelter</a>.
+      </>
+    ),
   },
   {
     category: "Listings & generation",
@@ -119,52 +114,50 @@ answer: (
       </>
     ),
   },
-
-  // Top-ups
   {
-    category: "Top-ups",
-    question: "What are top-ups and how do they work?",
+    category: "Listings & generation",
+    question: "How many variants can I generate at once?",
     answer: (
       <>
-        Top-ups are one-off purchases that add to your monthly allowance for 30 days. <strong>+50 listings</strong> for £9, <strong>+100 listings</strong> for £15, or <strong>+25 vault slots</strong> for £5. Buy them from your Account page when you need extra capacity.
-      </>
-    ),
-  },
-  {
-    category: "Top-ups",
-    question: "Do top-ups stack if I buy more than one?",
-    answer: (
-      <>
-        Yes. If you buy a second top-up before the first expires, the listings stack and the 30-day window resets to the latest purchase. So buying +50 today and +100 next week gives you 150 bonus listings, all valid for 30 days from the second purchase.
-      </>
-    ),
-  },
-  {
-    category: "Top-ups",
-    question: "What happens to unused top-up listings after 30 days?",
-    answer: (
-      <>
-        They expire. Top-ups are a 30-day boost on top of your subscription, not permanent credit. If you regularly need more than your plan allows, upgrading to Lister (unlimited) is usually better value than repeatedly buying top-ups.
-      </>
-    ),
-  },
-  {
-    category: "Top-ups",
-    question: "Can free users buy top-ups?",
-    answer: (
-      <>
-        No. Top-ups are only available on Pro plans. Free users need to upgrade to Pro first, and Lister/Team users already have unlimited listings so don't need them.
+        Free generates 1 listing per request. <strong>Pro</strong> can generate up to 2 variants per request — different tone or audience for comparison. <strong>Lister</strong> can generate up to 3 variants and also unlocks the full A/B testing sandbox.
       </>
     ),
   },
 
-  // Vault
+  {
+    category: "Compliance checker",
+    question: "How does the compliance checker work?",
+    answer: (
+      <>
+        Paste any UK rental listing into the checker. It scans for risky language — discriminatory phrasing, banned fees, outdated terminology, Renters&apos; Rights Act breaches — and gives you a short, drop-in replacement for each flagged phrase. Click to replace, or rewrite manually.
+      </>
+    ),
+  },
+  {
+    category: "Compliance checker",
+    question: "Who can use the compliance checker?",
+    answer: (
+      <>
+        <strong>Pro</strong> users get 75 compliance scans per month. <strong>Lister</strong> users get unlimited scans. Free users can&apos;t use the compliance checker — upgrade to Pro or Lister to unlock.
+      </>
+    ),
+  },
+  {
+    category: "Compliance checker",
+    question: "Is this legal advice?",
+    answer: (
+      <>
+        <strong>No.</strong> The compliance checker catches common breaches but it&apos;s a tool, not a solicitor. For complex situations consult a qualified property law professional or check the <a href="[nrla.org.uk](https://nrla.org.uk)" target="_blank" rel="noopener" className="text-primary underline">NRLA</a>, <a href="[england.shelter.org.uk](https://england.shelter.org.uk)" target="_blank" rel="noopener" className="text-primary underline">Shelter</a>, or <a href="[gov.uk](https://gov.uk)" target="_blank" rel="noopener" className="text-primary underline">gov.uk</a>.
+      </>
+    ),
+  },
+
   {
     category: "Vault",
     question: "What's the Vault?",
     answer: (
       <>
-        Your saved listings. Each listing in the Vault can be searched, renamed, edited, sent to the compliance checker, sent to A/B testing, or exported as a PDF. Pro plans get 50 vault slots, Lister and Team get unlimited.
+        Your saved listings. Each listing in the Vault can be searched, renamed, edited, sent to the compliance checker, sent to A/B testing, or exported as a PDF. Pro plans get 50 vault slots, Lister gets unlimited.
       </>
     ),
   },
@@ -178,13 +171,12 @@ answer: (
     ),
   },
 
-  // Account & data
   {
     category: "Account & data",
     question: "How do I delete my account?",
     answer: (
       <>
-        Go to your Account page and scroll to the Delete account section. Type DELETE to confirm. Your account, all vault listings, and any active subscription are permanently removed within seconds. There's no recovery — make sure you've exported anything important first.
+        Go to your Account page and scroll to the Delete account section. Type DELETE to confirm. Your account, all vault listings, and any active subscription are permanently removed within seconds. There&apos;s no recovery — make sure you&apos;ve exported anything important first.
       </>
     ),
   },
@@ -193,7 +185,7 @@ answer: (
     question: "Do you train AI on my listings?",
     answer: (
       <>
-        No. Your listings are sent to our AI provider (Anthropic) only at the moment of generation, and they aren't retained or used for training. We don't sell your data, and we don't store your listings anywhere except your private vault.
+        No. Your listings are sent to our AI provider (Anthropic) only at the moment of generation, and they aren&apos;t retained or used for training. We don&apos;t sell your data, and we don&apos;t store your listings anywhere except your private vault.
       </>
     ),
   },
@@ -202,7 +194,7 @@ answer: (
     question: "Can I change my email address?",
     answer: (
       <>
-        Yes. On your Account page, enter the new email and click "Send confirmation". You'll get a link at the new address — clicking it confirms the change. Your old email keeps working until you confirm.
+        Yes. On your Account page, enter the new email and click &ldquo;Send confirmation&rdquo;. You&apos;ll get a link at the new address — clicking it confirms the change. Your old email keeps working until you confirm.
       </>
     ),
   },
@@ -211,12 +203,11 @@ answer: (
     question: "How do I sign in?",
     answer: (
       <>
-        Tenancy uses magic-link authentication — no passwords. Enter your email on the login page and we'll send you a 6-digit code and a sign-in link. Use either to sign in. Codes expire after one hour.
+        Tenancy uses magic-link authentication — no passwords. Enter your email on the login page and we&apos;ll send you a 6-digit code and a sign-in link. Use either to sign in. Codes expire after one hour.
       </>
     ),
   },
 
-  // Support
   {
     category: "Support",
     question: "Something's wrong — how do I get help?",
@@ -231,7 +222,7 @@ answer: (
     question: "Do you offer refunds for accidental purchases?",
     answer: (
       <>
-        Top-ups are non-refundable, but if you bought one by mistake within the last 24 hours and haven't used the extra capacity, email us and we'll usually refund as a goodwill gesture. Subscription refunds work as described above — cancel anytime, keep access until the period ends.
+        Subscription refunds work as described above — cancel anytime, keep access until the period ends. If you signed up by mistake in the last 24 hours and haven&apos;t generated any listings, email us and we&apos;ll refund as a goodwill gesture.
       </>
     ),
   },
@@ -252,7 +243,7 @@ export default function FAQPage() {
           Frequently asked questions
         </h1>
         <p className="mt-4 text-muted-foreground">
-          Everything you need to know about Tenancy. Can't find what you're looking for?{" "}
+          Everything you need to know about Tenancy. Can&apos;t find what you&apos;re looking for?{" "}
           <a href="mailto:vr047836@gmail.com" className="text-primary underline">
             Email us
           </a>

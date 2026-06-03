@@ -21,7 +21,6 @@ import {
   Wifi,
   Car,
   AlertTriangle,
-  RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -211,7 +210,7 @@ export default function GeneratorPage() {
     restrictions: "",
     accessibility: "",
     availableFrom: "",
-    minTerm: "12",
+    minTerm: "",
     maxTenants: "",
     billsIncluded: [],
     petsPolicy: "case-by-case",
@@ -243,34 +242,22 @@ export default function GeneratorPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tier, listings_used, bonus_listings, bonus_listings_expires_at, bonus_vault_slots, bonus_vault_expires_at")
+        .select("tier, listings_used")
         .eq("id", user.id)
         .single()
 
       if (profile) {
-        const now = new Date()
         setTier(profile.tier)
         const tierLimits: Record<string, number | null> = { free: 5, pro: 100, lister: null }
         const baseLimit = tierLimits[profile.tier] ?? null
 
-        const bonusExpiresAt = profile.bonus_listings_expires_at
-          ? new Date(profile.bonus_listings_expires_at)
-          : null
-        const bonusActive = bonusExpiresAt && bonusExpiresAt > now
-        const activeBonus = bonusActive ? (profile.bonus_listings || 0) : 0
-
         setUsage({
           used: profile.listings_used || 0,
-          limit: baseLimit === null ? null : baseLimit + activeBonus,
+          limit: baseLimit,
         })
 
         const tierCaps: Record<string, number | null> = { free: 0, pro: 50, lister: null }
-        const baseCapForVault = tierCaps[profile.tier] ?? null
-        let bonusVault = 0
-        if (profile.bonus_vault_expires_at && new Date(profile.bonus_vault_expires_at) > now) {
-          bonusVault = profile.bonus_vault_slots || 0
-        }
-        const effectiveVaultCap = baseCapForVault === null ? null : baseCapForVault + bonusVault
+        const effectiveVaultCap = tierCaps[profile.tier] ?? null
         if (effectiveVaultCap !== null) {
           const vaultRes = await fetch("/api/vault")
           if (vaultRes.ok) {
@@ -394,8 +381,8 @@ export default function GeneratorPage() {
       if (!res.ok) {
         if (res.status === 402 && data.error === "vault_full") {
           toast.error("Vault is full", {
-            description: data.message || "Buy a vault top-up or upgrade to Lister.",
-            action: { label: "Top up", onClick: () => window.location.href = "/account" },
+            description: data.message || "Upgrade to Lister for unlimited vault storage.",
+            action: { label: "Upgrade", onClick: () => window.location.href = "/pricing" },
           })
           setVaultFull(true)
         } else if (res.status === 403 && data.error === "vault_locked") {
@@ -444,6 +431,7 @@ export default function GeneratorPage() {
       toast.success(`Saved ${savedCount} version${savedCount !== 1 ? "s" : ""} to vault`)
     }
   }
+
   const handleDownloadPDF = () => {
     if (!output) return
 
@@ -601,7 +589,7 @@ export default function GeneratorPage() {
     cursorY = margin
     writeHeading("Tenancy Terms")
     writeKeyValue("Available from", formData.availableFrom || "Immediately")
-    writeKeyValue("Minimum term", formData.minTerm ? `${formData.minTerm} months` : "12 months")
+    writeKeyValue("Minimum term", formData.minTerm ? `${formData.minTerm} months` : "Indefinite periodic (RRA 2025)")
     writeKeyValue("Maximum tenants", formData.maxTenants)
     writeKeyValue("Pets policy", formData.petsPolicy?.replace(/-/g, " "))
     writeKeyValue("Smoking", formData.smokingAllowed ? "Permitted inside" : "Not permitted inside")
@@ -612,33 +600,32 @@ export default function GeneratorPage() {
     doc.setFont("helvetica", "normal")
     doc.setFontSize(10)
     doc.setTextColor(60)
-  const reminders = [
-  "• Provide the tenant with the latest How to Rent guide (gov.uk).",
-  "• Conduct Right to Rent immigration checks on all tenants over 18.",
-  "• Protect the deposit in a government-approved scheme within 30 days.",
-  "• Provide a valid Energy Performance Certificate (EPC).",
-  "• Provide a current Gas Safety Certificate (if gas is present).",
-  "• Provide an Electrical Installation Condition Report (EICR) less than 5 years old.",
-  "• Install working smoke alarms on every storey and CO alarms in rooms with solid fuel.",
-  "• Under the Renters' Rights Act 2025 (in force from 1 May 2026): all new tenancies are indefinite periodic — no fixed term.",
-  "• Section 21 no-fault evictions are abolished. Possession requires a Section 8 ground only.",
-  "• Rental bidding is illegal — accept applications at the advertised rent.",
-  "• Rent in advance for new tenancies is restricted — do not request multiple months upfront.",
-  "• Discriminating against tenants with children or those receiving benefits is illegal.",
-  "• Register with the new Private Rented Sector Database when it goes live.",
-  "• Comply with the new Decent Homes Standard for the private rented sector.",
-  "• Landlord cannot use moving-in (Ground 1) or selling (Ground 1A) grounds in the first 12 months of a tenancy.",
-  "• Landlord notice for moving-in or selling grounds is now 4 months.",
-  "• Re-letting or re-marketing the property within 12 months of using Grounds 1 or 1A is an offence.",
-  "• Rent can only be increased once per year via a Section 13 notice, giving 2 months' notice, at market rate.",
-  "• Tenants can end the tenancy at any time with 2 months' written notice.",
-  "• Mandatory rent arrears threshold for possession is 3 months, with 4 weeks' notice (Ground 8).",
-  "• Pet requests cannot be unreasonably refused — consider each request on its merits.",
-  "• Awaab's Law applies: serious hazards (damp, mould) must be addressed within statutory timescales.",
-  "• Civil penalties: up to £7,000 for initial breaches; up to £40,000 or criminal prosecution for serious or repeat breaches.",
-  "• Rent repayment orders can be claimed for up to 24 months of rent for qualifying offences.",
-]
-
+    const reminders = [
+      "• Provide the tenant with the latest How to Rent guide (gov.uk).",
+      "• Conduct Right to Rent immigration checks on all tenants over 18.",
+      "• Protect the deposit in a government-approved scheme within 30 days.",
+      "• Provide a valid Energy Performance Certificate (EPC).",
+      "• Provide a current Gas Safety Certificate (if gas is present).",
+      "• Provide an Electrical Installation Condition Report (EICR) less than 5 years old.",
+      "• Install working smoke alarms on every storey and CO alarms in rooms with solid fuel.",
+      "• Under the Renters' Rights Act 2025 (in force from 1 May 2026): all new tenancies are indefinite periodic — no fixed term.",
+      "• Section 21 no-fault evictions are abolished. Possession requires a Section 8 ground only.",
+      "• Rental bidding is illegal — accept applications at the advertised rent.",
+      "• Rent in advance for new tenancies is restricted — do not request multiple months upfront.",
+      "• Discriminating against tenants with children or those receiving benefits is illegal.",
+      "• Register with the new Private Rented Sector Database when it goes live.",
+      "• Comply with the new Decent Homes Standard for the private rented sector.",
+      "• Landlord cannot use moving-in (Ground 1) or selling (Ground 1A) grounds in the first 12 months of a tenancy.",
+      "• Landlord notice for moving-in or selling grounds is now 4 months.",
+      "• Re-letting or re-marketing the property within 12 months of using Grounds 1 or 1A is an offence.",
+      "• Rent can only be increased once per year via a Section 13 notice, giving 2 months' notice, at market rate.",
+      "• Tenants can end the tenancy at any time with 2 months' written notice.",
+      "• Mandatory rent arrears threshold for possession is 3 months, with 4 weeks' notice (Ground 8).",
+      "• Pet requests cannot be unreasonably refused — consider each request on its merits.",
+      "• Awaab's Law applies: serious hazards (damp, mould) must be addressed within statutory timescales.",
+      "• Civil penalties: up to £7,000 for initial breaches; up to £40,000 or criminal prosecution for serious or repeat breaches.",
+      "• Rent repayment orders can be claimed for up to 24 months of rent for qualifying offences.",
+    ]
     reminders.forEach((line) => {
       addPageIfNeeded()
       const wrapped = doc.splitTextToSize(line, contentWidth)
@@ -664,6 +651,9 @@ export default function GeneratorPage() {
 
   const isCurrentSaved = savedVariants.includes(activeVariant)
   const allSaved = variants.length > 0 && variants.every((_, i) => savedVariants.includes(i))
+
+  // Max variants based on tier: free=1, pro=2, lister=3
+  const maxVariants = tier === "lister" ? 3 : tier === "pro" ? 2 : 1
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -901,17 +891,16 @@ export default function GeneratorPage() {
                     onChange={(e) => setFormData((p) => ({ ...p, availableFrom: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-  <Label htmlFor="minTerm" className="flex items-center gap-2">
-    Min term (months)
-    <span className="text-[10px] uppercase font-bold bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">Note</span>
-  </Label>
-  <Input id="minTerm" type="number" placeholder="—" value={formData.minTerm}
-    onChange={(e) => setFormData((p) => ({ ...p, minTerm: e.target.value }))} />
-  <p className="text-[11px] text-muted-foreground">
-    Under the Renters' Rights Act 2025, all tenancies are now indefinite periodic. Tenants can give 2 months' notice at any time. Leave blank or use only if a specific arrangement applies.
-  </p>
-</div>
-
+                  <Label htmlFor="minTerm" className="flex items-center gap-2">
+                    Min term (months)
+                    <span className="text-[10px] uppercase font-bold bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">Note</span>
+                  </Label>
+                  <Input id="minTerm" type="number" placeholder="—" value={formData.minTerm}
+                    onChange={(e) => setFormData((p) => ({ ...p, minTerm: e.target.value }))} />
+                  <p className="text-[11px] text-muted-foreground">
+                    Under the Renters&apos; Rights Act 2025, all tenancies are now indefinite periodic. Tenants can give 2 months&apos; notice at any time. Leave blank or use only if a specific arrangement applies.
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -993,18 +982,23 @@ export default function GeneratorPage() {
               <div className="space-y-2">
                 <Label htmlFor="variants" className="flex items-center gap-2">
                   Number of versions
-                  {(tier === "free" || tier === "pro") && <span className="text-[10px] uppercase font-bold bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">Lister</span>}
+                  {tier === "free" && <span className="text-[10px] uppercase font-bold bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">Pro</span>}
                 </Label>
                 <Select value={String(formData.variants)}
                   onValueChange={(v) => setFormData((p) => ({ ...p, variants: parseInt(v) }))}
-                  disabled={tier === "free" || tier === "pro"}>
+                  disabled={tier === "free"}>
                   <SelectTrigger id="variants"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">1 version</SelectItem>
-                    <SelectItem value="2">2 versions to compare</SelectItem>
-                    <SelectItem value="3">3 versions to compare</SelectItem>
+                    {maxVariants >= 2 && <SelectItem value="2">2 versions to compare</SelectItem>}
+                    {maxVariants >= 3 && <SelectItem value="3">3 versions to compare</SelectItem>}
                   </SelectContent>
                 </Select>
+                {tier === "pro" && (
+                  <p className="text-xs text-muted-foreground">
+                    Pro lets you generate up to 2 variants per request. Upgrade to Lister for 3 variants and unlimited A/B testing.
+                  </p>
+                )}
                 {tier === "lister" && formData.variants > 1 && (
                   <p className="text-xs text-muted-foreground">
                     Each version uses a different tone and audience automatically. You can change tone or audience on any version below to regenerate it.
@@ -1029,7 +1023,7 @@ export default function GeneratorPage() {
                     {tier === "free" ? (
                       <a href="/pricing" className="underline">Upgrade to Pro</a>
                     ) : (
-                      <a href="/account" className="underline">Buy a top-up</a>
+                      <a href="/pricing" className="underline">Upgrade to Lister</a>
                     )}
                   </span>
                 ) : usage.limit - usage.used <= 10 ? (
@@ -1038,7 +1032,7 @@ export default function GeneratorPage() {
                     {tier === "free" ? (
                       <a href="/pricing" className="underline">upgrade for more</a>
                     ) : (
-                      <a href="/account" className="underline">top up your allowance</a>
+                      <a href="/pricing" className="underline">upgrade to Lister</a>
                     )}
                   </span>
                 ) : null}
@@ -1208,4 +1202,3 @@ export default function GeneratorPage() {
     </div>
   )
 }
-

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tier, listings_used, listings_reset_at, bonus_listings, bonus_listings_expires_at")
+      .select("tier, listings_used, listings_reset_at")
       .eq("id", user.id)
       .single()
 
@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Profile not found." }, { status: 404 })
     }
 
-    // Reset usage if 30 days passed
     const resetAt = profile.listings_reset_at ? new Date(profile.listings_reset_at) : new Date()
     const daysSinceReset = (Date.now() - resetAt.getTime()) / (1000 * 60 * 60 * 24)
     let listingsUsed = profile.listings_used || 0
@@ -78,25 +77,14 @@ export async function POST(request: NextRequest) {
       listingsUsed = 0
     }
 
-    // Compute effective limit including bonus
-    const baseTierLimit = TIER_LIMITS[profile.tier] ?? null
-    const now = new Date()
-    const bonusExpiresAt = profile.bonus_listings_expires_at
-      ? new Date(profile.bonus_listings_expires_at)
-      : null
-    const bonusActive = bonusExpiresAt && bonusExpiresAt > now
-    const activeBonus = bonusActive ? (profile.bonus_listings || 0) : 0
-    const effectiveLimit = baseTierLimit === null ? null : baseTierLimit + activeBonus
+    const effectiveLimit = TIER_LIMITS[profile.tier] ?? null
 
     if (effectiveLimit !== null && listingsUsed >= effectiveLimit) {
-      const hasBonus = activeBonus > 0
       let message: string
       if (profile.tier === "free") {
         message = "You've used your 5 free listings this month. Upgrade to Pro for 100 listings/month, or wait until next month."
       } else if (profile.tier === "pro") {
-        message = hasBonus
-          ? `You've used all ${effectiveLimit} listings this month (${baseTierLimit} from Pro + ${activeBonus} from top-ups). Buy another top-up on your Account page, or upgrade to Lister for unlimited.`
-          : `You've used your ${baseTierLimit} Pro listings this month. Buy a top-up on your Account page, or upgrade to Lister for unlimited generations.`
+        message = `You've used your ${effectiveLimit} Pro listings this month. Upgrade to Lister for unlimited generations.`
       } else {
         message = "You've used your listings this month."
       }
@@ -114,17 +102,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const propertyName = propertyTypeNames[body.propertyType] || body.propertyType || "property"
 
-    // Pro+ gets length and audience options
     const hasProFeatures = profile.tier !== "free"
-    const hasMultipleVariants = profile.tier === "lister"
+    const isLister = profile.tier === "lister"
     const length = hasProFeatures && body.length ? body.length : "medium"
     const audience = hasProFeatures && body.audience ? body.audience : "general"
-    const variantsRequested = hasMultipleVariants && body.variants ? Math.min(body.variants, 3) : 1
 
-    // Force-tone override: when user clicks "regenerate this variant with X tone"
+    // Pro can request up to 2 variants, Lister up to 3
+    const maxVariants = isLister ? 3 : hasProFeatures ? 2 : 1
+    const variantsRequested = body.variants ? Math.min(body.variants, maxVariants) : 1
+
     const forceTone = typeof body.forceTone === "string" ? body.forceTone : null
 
-    // Build per-variant config
     const variantConfigs: { tone: string; audience: string }[] = []
     if (forceTone) {
       variantConfigs.push({ tone: forceTone, audience })
@@ -240,23 +228,18 @@ ${isMultiVariant ? `\nSEPARATOR: Between versions, output a single line that is 
       .map((b) => b.text)
       .join("")
       .trim()
-
     const rawListings = isMultiVariant
       ? fullText.split(/---VARIANT---/i).map(s => s.trim()).filter(Boolean)
       : [fullText]
-
     const listings = rawListings.map((content, i) => ({
       content,
       tone: variantConfigs[i]?.tone || body.tone || "professional",
       audience: variantConfigs[i]?.audience || audience,
     }))
-
-    // Increment usage
     await supabase
       .from("profiles")
       .update({ listings_used: listingsUsed + 1 })
       .eq("id", user.id)
-
     return NextResponse.json({
       listing: listings[0]?.content || "",
       listings: listings.map(l => l.content),

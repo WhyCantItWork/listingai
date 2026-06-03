@@ -2,11 +2,11 @@
 
 import { toast } from "sonner"
 import { useEffect, useState, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Crown, CreditCard, LogOut, Plus, Sparkles, CheckCircle2, X, Clock, TrendingUp, Mail, AlertTriangle } from "lucide-react"
+import { Crown, CreditCard, LogOut, TrendingUp, Mail, AlertTriangle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -26,10 +26,6 @@ type Tier = "free" | "pro" | "lister"
 interface Profile {
   tier: Tier
   listings_used: number | null
-  bonus_listings: number | null
-  bonus_listings_expires_at: string | null
-  bonus_vault_slots: number | null
-  bonus_vault_expires_at: string | null
 }
 
 const TIER_LIMITS: Record<Tier, number | null> = {
@@ -44,41 +40,11 @@ const VAULT_CAPS: Record<Tier, number | null> = {
   lister: null,
 }
 
-const LISTING_TOPUPS = [
-  {
-    id: "50",
-    label: "+50 Listings",
-    price: "£9",
-    description: "Adds 50 listings to your monthly allowance for 30 days",
-    badge: null,
-  },
-  {
-    id: "100",
-    label: "+100 Listings",
-    price: "£15",
-    description: "Adds 100 listings to your monthly allowance for 30 days",
-    badge: "Best value",
-  },
-]
-
-const VAULT_TOPUPS = [
-  {
-    id: "vault-25",
-    label: "+25 Vault Slots",
-    price: "£5",
-    description: "Adds 25 vault storage slots for 30 days",
-    badge: null,
-  },
-]
-
 function AccountPageContent() {
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
-  const [topupLoading, setTopupLoading] = useState<string | null>(null)
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false)
-  const [showCancelBanner, setShowCancelBanner] = useState(false)
   const [vaultUsed, setVaultUsed] = useState(0)
 
   const [newEmail, setNewEmail] = useState("")
@@ -88,12 +54,6 @@ function AccountPageContent() {
   const [deleting, setDeleting] = useState(false)
 
   const router = useRouter()
-  const searchParams = useSearchParams()
-
-  useEffect(() => {
-    if (searchParams.get("topup") === "success") setShowSuccessBanner(true)
-    if (searchParams.get("topup") === "cancelled") setShowCancelBanner(true)
-  }, [searchParams])
 
   useEffect(() => {
     const load = async () => {
@@ -106,7 +66,7 @@ function AccountPageContent() {
       setUser(user)
       const { data } = await supabase
         .from("profiles")
-        .select("tier, listings_used, bonus_listings, bonus_listings_expires_at, bonus_vault_slots, bonus_vault_expires_at")
+        .select("tier, listings_used")
         .eq("id", user.id)
         .single()
       setProfile(data as Profile)
@@ -139,22 +99,6 @@ function AccountPageContent() {
     } else {
       toast.error("Couldn't open billing portal", { description: data.error })
       setPortalLoading(false)
-    }
-  }
-
-  const handleTopUp = async (topupId: string) => {
-    setTopupLoading(topupId)
-    const res = await fetch("/api/stripe/topup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topupId }),
-    })
-    const data = await res.json()
-    if (data.url) {
-      window.location.href = data.url
-    } else {
-      toast.error("Couldn't start checkout", { description: data.error })
-      setTopupLoading(null)
     }
   }
 
@@ -226,63 +170,17 @@ function AccountPageContent() {
   }
 
   const tier = profile?.tier ?? "free"
-  const baseLimit = TIER_LIMITS[tier]
+  const totalLimit = TIER_LIMITS[tier]
   const listingsUsed = profile?.listings_used ?? 0
-  const baseVaultCap = VAULT_CAPS[tier]
-
-  const now = new Date()
-  const bonusListingsValid =
-    profile?.bonus_listings_expires_at && new Date(profile.bonus_listings_expires_at) > now
-      ? profile.bonus_listings ?? 0
-      : 0
-  const bonusListingsExpiresIn = profile?.bonus_listings_expires_at
-    ? Math.max(0, Math.ceil((new Date(profile.bonus_listings_expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-    : 0
-
-  const totalLimit = baseLimit === null ? null : baseLimit + bonusListingsValid
+  const totalVaultCap = VAULT_CAPS[tier]
   const remaining = totalLimit === null ? null : Math.max(0, totalLimit - listingsUsed)
-
-  const bonusVaultValid =
-    profile?.bonus_vault_expires_at && new Date(profile.bonus_vault_expires_at) > now
-      ? profile.bonus_vault_slots ?? 0
-      : 0
-  const totalVaultCap = baseVaultCap === null ? null : baseVaultCap + bonusVaultValid
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Your account</h1>
-        <p className="text-muted-foreground mt-1">Manage your subscription, top-ups, and account settings.</p>
+        <p className="text-muted-foreground mt-1">Manage your subscription and account settings.</p>
       </div>
-
-      {showSuccessBanner && (
-        <Card className="border-emerald-500/40 bg-emerald-500/5">
-          <CardContent className="flex items-center justify-between gap-3 py-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-foreground">Top-up activated</p>
-                <p className="text-muted-foreground mt-1">
-                  Your extra listings are ready to use. They&apos;ll stay active for 30 days from purchase.
-                </p>
-              </div>
-            </div>
-            <button onClick={() => setShowSuccessBanner(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          </CardContent>
-        </Card>
-      )}
-      {showCancelBanner && (
-        <Card className="border-muted bg-muted/30">
-          <CardContent className="flex items-center justify-between gap-3 py-4">
-            <p className="text-sm text-muted-foreground">Top-up cancelled — no payment was taken.</p>
-            <button onClick={() => setShowCancelBanner(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
@@ -342,161 +240,11 @@ function AccountPageContent() {
               </div>
             )}
 
-            {bonusListingsValid > 0 && (
-              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">+{bonusListingsValid} bonus listings active</p>
-                    <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Expires in {bonusListingsExpiresIn} day{bonusListingsExpiresIn !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {(() => {
-              const vaultExpiresAt = profile?.bonus_vault_expires_at ? new Date(profile.bonus_vault_expires_at) : null
-              const vaultValid = vaultExpiresAt && vaultExpiresAt > now ? profile?.bonus_vault_slots ?? 0 : 0
-              const vaultExpiresIn = vaultExpiresAt
-                ? Math.max(0, Math.ceil((vaultExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-                : 0
-              if (vaultValid === 0) return null
-              return (
-                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">+{vaultValid} bonus vault slots active</p>
-                      <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Expires in {vaultExpiresIn} day{vaultExpiresIn !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-
             {totalLimit !== null && remaining !== null && remaining < 10 && remaining > 0 && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                Only {remaining} listings left — consider a top-up below.
+                Only {remaining} listings left this month — upgrade to Lister for unlimited.
               </p>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Plus className="h-5 w-5 text-primary" />
-            Top up listings
-          </CardTitle>
-          <CardDescription>
-            Need more listings this month? Buy a top-up — it stacks on top of your plan and lasts 30 days from purchase.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {tier === "free" ? (
-            <div className="rounded-md border border-border bg-muted/30 p-4 text-sm">
-              <p className="text-muted-foreground">
-                Top-ups are available on Pro and Lister plans.{" "}
-                <button onClick={() => router.push("/pricing")} className="text-primary underline">
-                  Upgrade to a paid plan
-                </button>{" "}
-                to unlock them.
-              </p>
-            </div>
-          ) : tier === "lister" ? (
-            <div className="rounded-md border border-border bg-muted/30 p-4 text-sm">
-              <p className="text-muted-foreground">
-                You&apos;re on Lister with unlimited listings — no top-ups needed.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {LISTING_TOPUPS.map((topup) => (
-                <Card
-                  key={topup.id}
-                  className={
-                    topup.badge
-                      ? "relative border-2 border-primary bg-primary/5"
-                      : "border-border"
-                  }
-                >
-                  {topup.badge && (
-                    <div className="absolute -top-2.5 right-4">
-                      <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
-                        {topup.badge}
-                      </span>
-                    </div>
-                  )}
-                  <CardContent className="p-4 space-y-3">
-                    <div>
-                      <h3 className="font-bold text-foreground">{topup.label}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">{topup.description}</p>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-foreground">{topup.price}</span>
-                      <span className="text-xs text-muted-foreground">one-off</span>
-                    </div>
-                    <Button
-                      onClick={() => handleTopUp(topup.id)}
-                      disabled={topupLoading !== null}
-                      size="sm"
-                      className="w-full"
-                      variant={topup.badge ? "default" : "outline"}
-                    >
-                      {topupLoading === topup.id ? "Opening..." : "Buy now"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {tier === "pro" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Top up vault storage
-            </CardTitle>
-            <CardDescription>
-              Need more vault space? Buy extra slots — they stack on top of your 50 Pro slots and last 30 days from purchase.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {VAULT_TOPUPS.map((topup) => (
-                <Card key={topup.id} className="border-border">
-                  <CardContent className="p-4 space-y-3">
-                    <div>
-                      <h3 className="font-bold text-foreground">{topup.label}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">{topup.description}</p>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-foreground">{topup.price}</span>
-                      <span className="text-xs text-muted-foreground">one-off</span>
-                    </div>
-                    <Button
-                      onClick={() => handleTopUp(topup.id)}
-                      disabled={topupLoading !== null}
-                      size="sm"
-                      className="w-full"
-                      variant="outline"
-                    >
-                      {topupLoading === topup.id ? "Opening..." : "Buy now"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </CardContent>
         </Card>
       )}
@@ -658,4 +406,3 @@ export default function AccountPage() {
     </Suspense>
   )
 }
-
