@@ -53,7 +53,6 @@ const TIER_CAPS: Record<string, number | null> = {
   free: 0,
   pro: 50,
   lister: null,
-  team: null,
 }
 
 export function VaultClient() {
@@ -68,8 +67,7 @@ export function VaultClient() {
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [tier, setTier] = useState<"free" | "pro" | "lister" | "team">("free")
-  const [bonusVaultSlots, setBonusVaultSlots] = useState(0)
+  const [tier, setTier] = useState<"free" | "pro" | "lister">("free")
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [previewListing, setPreviewListing] = useState<SavedListing | null>(null)
@@ -85,7 +83,6 @@ export function VaultClient() {
     setLoading(false)
   }, [])
 
-  // One-time migration from localStorage to Supabase
   const migrateLocalStorage = useCallback(async () => {
     const stored = localStorage.getItem("listingai-vault")
     if (!stored) return false
@@ -127,12 +124,10 @@ export function VaultClient() {
         }),
       })
       if (res.ok) migrated++
-      // If we hit the cap, stop migrating
       if (res.status === 402) break
     }
 
     if (migrated > 0) {
-      // Clear localStorage so we don't migrate again
       localStorage.removeItem("listingai-vault")
     }
     setMigrating(false)
@@ -151,28 +146,22 @@ export function VaultClient() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("tier, bonus_vault_slots, bonus_vault_expires_at")
+        .select("tier")
         .eq("id", user.id)
         .single()
 
       if (profile) {
         setTier(profile.tier)
-        const expiresAt = profile.bonus_vault_expires_at ? new Date(profile.bonus_vault_expires_at) : null
-        const isActive = expiresAt && expiresAt > new Date()
-        setBonusVaultSlots(isActive ? (profile.bonus_vault_slots || 0) : 0)
       }
 
-      // Load Supabase listings first
       const res = await fetch("/api/vault")
       if (res.ok) {
         const data = await res.json()
         const supabaseListings = data.listings || []
 
-        // If we have NO Supabase listings but DO have localStorage data, migrate
         if (supabaseListings.length === 0) {
           const migrated = await migrateLocalStorage()
           if (migrated) {
-            // Reload from Supabase after migration
             await loadVault()
             return
           }
@@ -184,13 +173,12 @@ export function VaultClient() {
     init()
   }, [router, loadVault, migrateLocalStorage])
 
-const handleCopy = async (id: string, content: string) => {
-  await navigator.clipboard.writeText(content)
-  setCopiedId(id)
-  setTimeout(() => setCopiedId(null), 2000)
-  toast.success("Copied to clipboard")
-}
-
+  const handleCopy = async (id: string, content: string) => {
+    await navigator.clipboard.writeText(content)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+    toast.success("Copied to clipboard")
+  }
 
   const handleEdit = (listing: SavedListing) => {
     setEditingId(listing.id)
@@ -198,24 +186,23 @@ const handleCopy = async (id: string, content: string) => {
     setEditTitle(listing.title || listing.address || "")
   }
 
-const handleSaveEdit = async (id: string) => {
-  const res = await fetch(`/api/vault/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: editTitle.trim() || null, content: editContent }),
-  })
-  if (res.ok) {
-    const data = await res.json()
-    setListings((prev) => prev.map((l) => (l.id === id ? data.listing : l)))
-    toast.success("Listing updated")
-  } else {
-    toast.error("Couldn't update listing")
+  const handleSaveEdit = async (id: string) => {
+    const res = await fetch(`/api/vault/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: editTitle.trim() || null, content: editContent }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setListings((prev) => prev.map((l) => (l.id === id ? data.listing : l)))
+      toast.success("Listing updated")
+    } else {
+      toast.error("Couldn't update listing")
+    }
+    setEditingId(null)
+    setEditContent("")
+    setEditTitle("")
   }
-  setEditingId(null)
-  setEditContent("")
-  setEditTitle("")
-}
-
 
   const handleCancelEdit = () => {
     setEditingId(null)
@@ -223,26 +210,25 @@ const handleSaveEdit = async (id: string) => {
     setEditTitle("")
   }
 
-const handleDelete = async (id: string) => {
-  const res = await fetch(`/api/vault/${id}`, { method: "DELETE" })
-  if (res.ok) {
-    setListings((prev) => prev.filter((l) => l.id !== id))
-    setSelectedIds((prev) => prev.filter((sid) => sid !== id))
-    toast.success("Listing deleted")
-  } else {
-    toast.error("Couldn't delete listing")
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/vault/${id}`, { method: "DELETE" })
+    if (res.ok) {
+      setListings((prev) => prev.filter((l) => l.id !== id))
+      setSelectedIds((prev) => prev.filter((sid) => sid !== id))
+      toast.success("Listing deleted")
+    } else {
+      toast.error("Couldn't delete listing")
+    }
   }
-}
 
-const handleBulkDelete = async () => {
-  const count = selectedIds.length
-  await Promise.all(selectedIds.map((id) => fetch(`/api/vault/${id}`, { method: "DELETE" })))
-  setListings((prev) => prev.filter((l) => !selectedIds.includes(l.id)))
-  setSelectedIds([])
-  setSelectionMode(false)
-  toast.success(`${count} listing${count !== 1 ? "s" : ""} deleted`)
-}
-
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length
+    await Promise.all(selectedIds.map((id) => fetch(`/api/vault/${id}`, { method: "DELETE" })))
+    setListings((prev) => prev.filter((l) => !selectedIds.includes(l.id)))
+    setSelectedIds([])
+    setSelectionMode(false)
+    toast.success(`${count} listing${count !== 1 ? "s" : ""} deleted`)
+  }
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) =>
@@ -340,8 +326,7 @@ const handleBulkDelete = async () => {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 
-  const baseCap = TIER_CAPS[tier]
-  const cap = baseCap === null ? null : baseCap + bonusVaultSlots
+  const cap = TIER_CAPS[tier]
   const overCap = cap !== null && listings.length > cap
 
   if (loading || migrating) {
@@ -370,11 +355,6 @@ const handleBulkDelete = async () => {
         <div className="flex items-center gap-2">
           <div className="text-sm text-muted-foreground">
             {listings.length}{cap !== null && ` / ${cap}`} listings
-            {bonusVaultSlots > 0 && (
-              <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
-                (+{bonusVaultSlots} bonus)
-              </span>
-            )}
           </div>
           {selectionMode ? (
             <Button variant="outline" size="sm" onClick={() => { setSelectionMode(false); setSelectedIds([]) }}>
@@ -393,9 +373,9 @@ const handleBulkDelete = async () => {
           <CardContent className="flex items-start gap-3 py-4">
             <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-foreground">You're over your vault limit ({cap} listings)</p>
+              <p className="font-medium text-foreground">You&apos;re over your vault limit ({cap} listings)</p>
               <p className="mt-1 text-muted-foreground">
-                You can browse and edit older listings, but new ones won't save. Buy a <a href="/account" className="underline text-primary">vault top-up</a>, upgrade to <a href="/pricing" className="underline text-primary">Lister</a> for unlimited storage, or delete some listings.
+                You can browse and edit older listings, but new ones won&apos;t save. <a href="/pricing" className="underline text-primary">Upgrade to Lister</a> for unlimited storage, or delete some listings.
               </p>
             </div>
           </CardContent>
@@ -566,7 +546,7 @@ const handleBulkDelete = async () => {
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
-                                <AlertDialogDescription>This can't be undone.</AlertDialogDescription>
+                                <AlertDialogDescription>This can&apos;t be undone.</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -597,9 +577,9 @@ const handleBulkDelete = async () => {
               {selectedIds.length > 2 && <span className="ml-2 text-amber-500">— pick exactly 2 to A/B test</span>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={sendToABTest} disabled={selectedIds.length !== 2 || (tier !== "lister" && tier !== "team")}>
+              <Button onClick={sendToABTest} disabled={selectedIds.length !== 2 || tier !== "lister"}>
                 <Split className="mr-2 h-4 w-4" />
-                {tier !== "lister" && tier !== "team" ? "A/B Test (Lister)" : "Compare in A/B Test"}
+                {tier !== "lister" ? "A/B Test (Lister)" : "Compare in A/B Test"}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -611,7 +591,7 @@ const handleBulkDelete = async () => {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete {selectedIds.length} listings?</AlertDialogTitle>
-                    <AlertDialogDescription>This can't be undone.</AlertDialogDescription>
+                    <AlertDialogDescription>This can&apos;t be undone.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>

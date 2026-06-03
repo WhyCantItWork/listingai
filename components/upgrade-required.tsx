@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 export function UpgradeRequired({ feature, requiredTier = "Pro" }: { feature: string; requiredTier?: "Pro" | "Lister" }) {
+  const description = requiredTier === "Lister"
+    ? `Upgrade to Lister to unlock ${feature.toLowerCase()}, unlimited listings, and the full Tenancy toolkit.`
+    : `Upgrade to ${requiredTier} to unlock ${feature.toLowerCase()} and the rest of Tenancy.`
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
       <Card className="border-2 border-primary/20">
@@ -16,7 +20,7 @@ export function UpgradeRequired({ feature, requiredTier = "Pro" }: { feature: st
               {feature} requires {requiredTier}
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Upgrade to {requiredTier} to unlock {feature.toLowerCase()} and the rest of {requiredTier === "Lister" ? "the power-user toolkit" : "Tenancy"}.
+              {description}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

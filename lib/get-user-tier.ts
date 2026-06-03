@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 
-export type Tier = "free" | "pro" | "lister" | "team"
+export type Tier = "free" | "pro" | "lister"
 
 export async function getUserTier(): Promise<{ tier: Tier; userId: string | null; email: string | null }> {
   const supabase = await createClient()
@@ -24,9 +24,13 @@ export async function getUserTier(): Promise<{ tier: Tier; userId: string | null
 }
 
 export function isPaidTier(tier: Tier): boolean {
-  return tier === "pro" || tier === "lister" || tier === "team"
+  return tier === "pro" || tier === "lister"
+}
+
+export function hasCompliance(tier: Tier): boolean {
+  return tier === "pro" || tier === "lister"
 }
 
 export function hasAdvancedFeatures(tier: Tier): boolean {
-  return tier === "lister" || tier === "team"
+  return tier === "lister"
 }
