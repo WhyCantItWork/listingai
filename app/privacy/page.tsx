@@ -9,7 +9,7 @@ export default function PrivacyPage() {
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="prose prose-slate dark:prose-invert max-w-none">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
-        <p className="text-sm text-muted-foreground">Last updated: 23 May 2026</p>
+        <p className="text-sm text-muted-foreground">Last updated: 3 June 2026</p>
 
         <p className="mt-6 text-foreground">
           Tenancy (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) is committed to protecting your privacy. This policy explains what personal data we collect, how we use it, and your rights under the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.
@@ -22,11 +22,11 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">2. What we collect</h2>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
-          <li><strong>Account data:</strong> your email address. Tenancy uses magic-link authentication, so we don't store passwords.</li>
+          <li><strong>Account data:</strong> your email address. Tenancy uses magic-link authentication, so we do not store passwords.</li>
           <li><strong>Listing content:</strong> the property details you enter, the AI-generated descriptions, and any listings you save to your vault.</li>
           <li><strong>Compliance scan inputs:</strong> any listing text you paste into the Compliance Checker.</li>
           <li><strong>A/B test inputs:</strong> any variants you submit to the A/B Test tool.</li>
-          <li><strong>Subscription data:</strong> your tier (Free, Pro, Lister, Team), billing interval (monthly or yearly), top-up history, listing/vault usage counts.</li>
+          <li><strong>Subscription data:</strong> your tier (Free, Pro, or Lister), billing interval (monthly or yearly), and listing/vault/compliance usage counts.</li>
           <li><strong>Payment data:</strong> processed by Stripe. We do not store card details on our servers.</li>
           <li><strong>Technical data:</strong> IP address, browser type, and device information collected automatically by our hosting provider.</li>
         </ul>
@@ -34,9 +34,9 @@ export default function PrivacyPage() {
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">3. How we use your data</h2>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
           <li>To provide the service (account access, AI generation, vault storage, compliance scanning, A/B testing, PDF export).</li>
-          <li>To process subscription and top-up payments via Stripe.</li>
-          <li>To enforce plan limits (monthly listing allowances, vault capacity).</li>
-          <li>To send essential account emails (verification, password reset, billing notifications, email-change confirmations).</li>
+          <li>To process subscription payments via Stripe.</li>
+          <li>To enforce plan limits (monthly listing allowances, compliance scan allowances, vault capacity).</li>
+          <li>To send essential account emails (magic-link sign-in codes, billing notifications, email-change confirmations).</li>
           <li>To improve the service and prevent abuse.</li>
         </ul>
         <p className="text-foreground">
@@ -49,8 +49,9 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
           <li><strong>Supabase</strong> (database and authentication) — hosted in the EU. Stores your account, profile, vault listings, and usage data.</li>
-          <li><strong>Stripe</strong> (payment processing) — UK/EU and US. Handles subscriptions and one-off top-up payments.</li>
+          <li><strong>Stripe</strong> (payment processing) — UK/EU and US. Handles subscription payments.</li>
           <li><strong>Anthropic</strong> (AI generation via Claude API) — US-based. Receives the property details you enter and the listing text you paste into the Compliance Checker, only for the duration of each request.</li>
+          <li><strong>Resend</strong> (transactional email) — US-based. Sends magic-link sign-in codes, billing notifications, and email-change confirmations.</li>
           <li><strong>Vercel</strong> (website hosting) — global edge network.</li>
         </ul>
         <p className="text-foreground">
@@ -59,11 +60,9 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">5. How long we keep your data</h2>
         <ul className="list-disc pl-6 space-y-1 text-foreground">
-          <li>Account data: while your account is active, plus 30 days after deletion.</li>
-          <li>Vault listings: while your account is active. Deleted on request or account closure.</li>
+          <li>Account data and vault listings: while your account is active. When you delete your account from the Account page, all profile data and vault listings are removed immediately and cannot be recovered.</li>
           <li>Compliance and A/B test inputs: not stored. Each scan/test is processed in real time and discarded.</li>
-          <li>Payment records: 7 years, in line with UK tax law.</li>
-          <li>Top-up purchase history: kept while your account exists, for billing dispute purposes.</li>
+          <li>Payment records: retained by Stripe and in our billing logs for 7 years, in line with UK tax law.</li>
         </ul>
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">6. Your rights</h2>
@@ -74,10 +73,10 @@ export default function PrivacyPage() {
           <li>Request deletion of your data.</li>
           <li>Request a portable copy of your data.</li>
           <li>Object to processing or withdraw consent.</li>
-          <li>Lodge a complaint with the Information Commissioner&apos;s Office (ICO) at <a href="[ico.org.uk](https://ico.org.uk)" className="text-primary underline">ico.org.uk</a>.</li>
+          <li>Lodge a complaint with the Information Commissioner&apos;s Office (ICO) at <a href="[ico.org.uk](https://ico.org.uk)" target="_blank" rel="noopener" className="text-primary underline">ico.org.uk</a>.</li>
         </ul>
         <p className="text-foreground">
-          You can update your email and password directly on your Account page. To exercise any other rights or request data deletion, email <a href="mailto:vr047836@gmail.com" className="text-primary underline">vr047836@gmail.com</a>.
+          You can update your email and delete your account directly from your Account page. To exercise any other rights or request a data export, email <a href="mailto:vr047836@gmail.com" className="text-primary underline">vr047836@gmail.com</a>.
         </p>
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">7. Cookies</h2>
@@ -87,13 +86,8 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">8. Security</h2>
         <p className="text-foreground">
-          We use industry-standard security measures including HTTPS encryption, hashed passwords, and Row Level Security on our database (so users can only see their own data). No system is 100% secure, but we work hard to protect your data.
+          We use industry-standard security measures including HTTPS encryption, Supabase Row Level Security (so users can only access their own data), and magic-link authentication (no passwords stored on our servers). No system is 100% secure, but we work hard to protect your data.
         </p>
-        <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">8. Security</h2>
-<p className="text-foreground">
-  We use industry-standard security measures...
-</p>
-
 
         <h2 className="text-xl font-bold mt-8 mb-3 text-foreground">9. Changes to this policy</h2>
         <p className="text-foreground">
