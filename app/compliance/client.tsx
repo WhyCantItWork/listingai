@@ -66,21 +66,33 @@ export function ComplianceClient() {
   const handleReplace = (finding: Finding) => {
     let idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
 
-    if (idx === -1) {
-      const fuzzyPhrase = finding.phrase.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ").trim()
-      const fuzzyText = text.toLowerCase().replace(/[.,;:!?'"]/g, "").replace(/\s+/g, " ")
-      const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
-      if (fuzzyIdx === -1) {
-        toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
-        return
-      }
-      const words = finding.phrase.split(/\s+/)[0]
-      idx = text.toLowerCase().indexOf(words.toLowerCase())
-      if (idx === -1) {
-        toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
-        return
-      }
-    }
+if (idx === -1) {
+  // Strip markdown (asterisks, underscores, pipes) and punctuation for fuzzy matching
+  const stripMarkdown = (s: string) =>
+    s.toLowerCase()
+      .replace(/[*_|`]/g, "")
+      .replace(/[.,;:!?'"]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+
+  const fuzzyPhrase = stripMarkdown(finding.phrase)
+  const fuzzyText = stripMarkdown(text)
+  const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
+  if (fuzzyIdx === -1) {
+    toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
+    return
+  }
+
+  // Try to find the phrase in the original text by looking for the first significant word
+  const significantWords = finding.phrase.replace(/[*_|`]/g, "").trim().split(/\s+/).filter(w => w.length > 2)
+  const anchor = significantWords[0] || finding.phrase.split(/\s+/)[0]
+  idx = text.toLowerCase().indexOf(anchor.toLowerCase())
+  if (idx === -1) {
+    toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
+    return
+  }
+}
+
 
     const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
     const replacement = isRemoval ? "" : finding.alternative
@@ -118,8 +130,15 @@ export function ComplianceClient() {
     if (!findings) return
     let newText = text
     findings.forEach((f) => {
-      const idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
-      if (idx === -1) return
+let idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
+if (idx === -1) {
+  // Strip markdown for fuzzy match
+  const anchor = f.phrase.replace(/[*_|`]/g, "").trim().split(/\s+/).filter(w => w.length > 2)[0]
+  if (!anchor) return
+  idx = newText.toLowerCase().indexOf(anchor.toLowerCase())
+  if (idx === -1) return
+}
+
       const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
       const replacement = isRemoval ? "" : f.alternative
       newText = newText.slice(0, idx) + replacement + newText.slice(idx + f.phrase.length)

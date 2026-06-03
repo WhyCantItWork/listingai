@@ -171,7 +171,7 @@ ${text}
 """
 
 Output a JSON array of findings. Each finding must have:
-• "phrase": the exact problematic phrase from the text (direct quote)
+• "phrase": the exact problematic phrase from the text — copy it character-for-character INCLUDING any markdown formatting (asterisks, underscores) and punctuation that appears in the original. Do not strip or clean it.
 • "category": one of "DSS / Benefits", "Tenant Fees Act", "Equality Act — Familial", "Equality Act — Disability", "Equality Act — Religion", "Equality Act — Race/Nationality", "Equality Act — Age", "Equality Act — Sex/Orientation", "Right to Rent", "Liability / Coded Language", "Deposit Cap", "Other"
 • "severity": "high" (illegal/banned), "medium" (risky/grey area), "low" (best practice concern)
 • "reason": one short sentence explaining the legal basis
