@@ -1,181 +1,437 @@
-import Link from "next/link"
-import { Sparkles, FileCheck, Shield, Download, ArrowRight, CheckCircle2 } from "lucide-react"
+'use client'
+
+import { toast } from "sonner"
+import { useEffect, useState, Suspense } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Crown, CreditCard, LogOut, TrendingUp, Mail, AlertTriangle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-const features = [
-  {
-    icon: FileCheck,
-    title: "Material Information ready",
-    description:
-      "Generates Parts A, B, and C-compliant listings out of the box. Filled-in, formatted, ready to paste into Rightmove or Zoopla.",
-  },
-  {
-    icon: Shield,
-    title: "UK lettings compliance",
-    description:
-      "Live scan for Right to Rent, deposit, DSS-discrimination, and Equality Act language. Catches risks before they cost you a fine.",
-  },
-  {
-    icon: Download,
-    title: "Full tenancy pack PDF",
-    description:
-      "One-click export of the listing, the MI table, and a clean cover sheet. Send to landlords or attach to portals in seconds.",
-  },
-]
+type Tier = "free" | "pro" | "lister"
 
-const stats = [
-  { value: "Parts A·B·C", label: "Material Information covered" },
-  { value: "60s", label: "From details to listing" },
-  { value: "2024", label: "Mandatory MI rules — built in" },
-  { value: "UK only", label: "Built for British lettings, not retrofitted" },
-]
+interface Profile {
+  tier: Tier
+  listings_used: number | null
+  compliance_used: number | null
+}
 
-export default function LandingPage() {
+const TIER_LIMITS: Record<Tier, number | null> = {
+  free: 5,
+  pro: 100,
+  lister: null,
+}
+
+const VAULT_CAPS: Record<Tier, number | null> = {
+  free: 0,
+  pro: 50,
+  lister: null,
+}
+
+const COMPLIANCE_LIMITS: Record<Tier, number | null> = {
+  free: 0,
+  pro: 75,
+  lister: null,
+}
+
+function AccountPageContent() {
+  const [user, setUser] = useState<{ email?: string } | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [vaultUsed, setVaultUsed] = useState(0)
+
+  const [newEmail, setNewEmail] = useState("")
+  const [emailLoading, setEmailLoading] = useState(false)
+
+  const [deleteConfirm, setDeleteConfirm] = useState("")
+  const [deleting, setDeleting] = useState(false)
+
+  const router = useRouter()
+
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push("/auth/login")
+        return
+      }
+      setUser(user)
+      const { data } = await supabase
+        .from("profiles")
+        .select("tier, listings_used, compliance_used")
+        .eq("id", user.id)
+        .single()
+      setProfile(data as Profile)
+      setLoading(false)
+    }
+    load()
+  }, [router])
+
+  useEffect(() => {
+    const loadVaultCount = async () => {
+      try {
+        const res = await fetch("/api/vault")
+        if (res.ok) {
+          const data = await res.json()
+          setVaultUsed((data.listings || []).length)
+        }
+      } catch {
+        setVaultUsed(0)
+      }
+    }
+    loadVaultCount()
+  }, [])
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true)
+    const res = await fetch("/api/stripe/portal", { method: "POST" })
+    const data = await res.json()
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      toast.error("Couldn't open billing portal", { description: data.error })
+      setPortalLoading(false)
+    }
+  }
+
+  const handleChangeEmail = async () => {
+    if (!newEmail || !newEmail.includes("@")) {
+      toast.error("Please enter a valid email address")
+      return
+    }
+    if (newEmail === user?.email) {
+      toast.error("That's already your email")
+      return
+    }
+
+    setEmailLoading(true)
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ email: newEmail })
+
+    if (error) {
+      toast.error("Couldn't change email", { description: error.message })
+      setEmailLoading(false)
+      return
+    }
+
+    toast.success("Confirmation sent", {
+      description: `Check ${newEmail} and click the confirmation link to finish the change.`,
+      duration: 8000,
+    })
+    setNewEmail("")
+    setEmailLoading(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") {
+      toast.error("Type DELETE in capital letters to confirm")
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error("Couldn't delete account", { description: data.error || "Please try again or contact support." })
+        setDeleting(false)
+        return
+      }
+      toast.success("Account deleted", { description: "Your account and all data have been removed." })
+      window.location.href = "/"
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      toast.error("Couldn't delete account", { description: msg })
+      setDeleting(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/")
+    router.refresh()
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
+        Loading account...
+      </div>
+    )
+  }
+
+  const tier = profile?.tier ?? "free"
+  const totalLimit = TIER_LIMITS[tier]
+  const listingsUsed = profile?.listings_used ?? 0
+  const totalVaultCap = VAULT_CAPS[tier]
+  const complianceLimit = COMPLIANCE_LIMITS[tier]
+  const complianceUsed = profile?.compliance_used ?? 0
+  const remaining = totalLimit === null ? null : Math.max(0, totalLimit - listingsUsed)
+
   return (
-    <div className="flex flex-col">
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--color-primary)/0.15,transparent_50%)]" />
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span>Built for UK letting agents</span>
-            </div>
-            <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Material Information–ready listings,{" "}
-              <span className="text-primary">in 60 seconds</span>
-            </h1>
-            <p className="mt-6 text-pretty text-lg text-muted-foreground sm:text-xl">
-              Tenancy generates compliant property descriptions, Material Information tables,
-              and tenancy packs for UK letting agents. Built for Rightmove, Zoopla, and OnTheMarket — out of the box.
-            </p>
-            <p className="text-sm text-muted-foreground">
-  Updated for the Renters' Rights Act 2025 — covers the new tenancy model, rental bidding ban, rent in advance restrictions, and anti-discrimination protections.
-</p>
+    <div className="mx-auto max-w-3xl px-4 py-16 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Your account</h1>
+        <p className="text-muted-foreground mt-1">Manage your subscription and account settings.</p>
+      </div>
 
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link href="/generator">
-                  Generate a listing
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                <Link href="/pricing">View pricing</Link>
-              </Button>
-            </div>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                No credit card required
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                5 free listings per month
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                Cancel anytime
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Account details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Email</span>
+            <span className="font-medium text-foreground">{user?.email}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Plan</span>
+            <span className="font-medium text-foreground capitalize flex items-center gap-1">
+              {tier !== "free" && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+              {tier}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {tier !== "free" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Usage this month
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Listings used</span>
+              <span className="font-medium text-foreground">
+                {listingsUsed} {totalLimit === null ? "(unlimited)" : `/ ${totalLimit}`}
               </span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="border-t border-border bg-secondary/30 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Everything UK letting agents actually need
-            </h2>
-            <p className="mt-4 text-pretty text-lg text-muted-foreground">
-              Material Information, tenancy packs, and lettings-specific compliance — all in one place.
-            </p>
-          </div>
-          <div className="mx-auto mt-16 grid max-w-5xl gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <Card
-                key={feature.title}
-                className="border-border bg-card transition-shadow hover:shadow-lg"
-              >
-                <CardHeader>
-                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <feature.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-foreground">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base text-muted-foreground">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="border-t border-border py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Built for British lettings — not retrofitted from a US sales tool
-            </h2>
-            <p className="mt-4 text-pretty text-lg text-muted-foreground">
-              British English, GBP, UK property terms (flat, garden, leasehold), and the actual legal framework that applies here.
-            </p>
-          </div>
-          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-8 lg:grid-cols-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl font-bold text-primary sm:text-4xl">
-                  {stat.value}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">{stat.label}</div>
+            {totalLimit !== null && (
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, (listingsUsed / totalLimit) * 100)}%` }}
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            )}
 
-      {/* CTA */}
-      <section className="border-t border-border bg-primary py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
-              Stop dreading Material Information.
-            </h2>
-            <p className="mt-4 text-pretty text-lg text-primary-foreground/80">
-              Generate your first compliant tenancy listing in 60 seconds. Free to try.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                variant="secondary"
-                className="w-full sm:w-auto"
-              >
-                <Link href="/generator">
-                  Try it free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="w-full border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
-              >
-                <Link href="/pricing">See all plans</Link>
-              </Button>
+            <div className="flex justify-between text-sm pt-2">
+              <span className="text-muted-foreground">Compliance scans used</span>
+              <span className="font-medium text-foreground">
+                {complianceUsed} {complianceLimit === null ? "(unlimited)" : `/ ${complianceLimit}`}
+              </span>
             </div>
+            {complianceLimit !== null && (
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, (complianceUsed / complianceLimit) * 100)}%` }}
+                />
+              </div>
+            )}
+
+            <div className="flex justify-between text-sm pt-2">
+              <span className="text-muted-foreground">Vault storage used</span>
+              <span className="font-medium text-foreground">
+                {vaultUsed} {totalVaultCap === null ? "(unlimited)" : `/ ${totalVaultCap}`}
+              </span>
+            </div>
+            {totalVaultCap !== null && (
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, (vaultUsed / totalVaultCap) * 100)}%` }}
+                />
+              </div>
+            )}
+
+            {totalLimit !== null && remaining !== null && remaining < 10 && remaining > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Only {remaining} listings left this month — upgrade to Lister for unlimited.
+              </p>
+            )}
+
+            {complianceLimit !== null && complianceLimit - complianceUsed < 10 && complianceLimit - complianceUsed > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Only {complianceLimit - complianceUsed} compliance scans left this month — upgrade to Lister for unlimited.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+            <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Change email
+          </CardTitle>
+          <CardDescription>
+            You&apos;ll receive a confirmation link at the new address. The change takes effect once you click it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newEmail" className="text-sm">New email address</Label>
+            <Input
+              id="newEmail"
+              type="email"
+              placeholder="you@newaddress.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              disabled={emailLoading}
+            />
           </div>
-        </div>
-      </section>
+          <Button
+            onClick={handleChangeEmail}
+            disabled={emailLoading || !newEmail}
+            className="w-full sm:w-auto"
+          >
+            {emailLoading ? "Sending..." : "Send confirmation"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Subscription</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {tier === "free" ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                You&apos;re on the Free plan. Upgrade to unlock more listings, compliance scans, vault storage, A/B testing, and more.
+              </p>
+              <Button onClick={() => router.push("/pricing")} className="w-full sm:w-auto">
+                See plans
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Manage your subscription, update payment methods, view invoices, or cancel.
+              </p>
+              <Button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="w-full sm:w-auto flex items-center gap-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                {portalLoading ? "Opening..." : "Manage subscription"}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Sign out</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+            <LogOut className="h-4 w-4" />
+            Log out
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-rose-500/30">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2 text-rose-500">
+            <AlertTriangle className="h-5 w-5" />
+            Delete account
+          </CardTitle>
+          <CardDescription>
+            Permanently delete your account, all your saved listings, and your subscription. This can&apos;t be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Deleting your account will:
+          </p>
+          <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
+            <li>Cancel any active subscription immediately</li>
+            <li>Permanently delete all listings in your vault</li>
+            <li>Remove your profile and account data</li>
+            <li>Log you out of all devices</li>
+          </ul>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full sm:w-auto">
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Delete my account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  <span className="block">
+                    This action is <strong>permanent</strong>. Your account, all saved listings, and any active subscription will be deleted immediately and cannot be recovered.
+                  </span>
+                  <span className="block">
+                    Type <strong>DELETE</strong> below to confirm.
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                autoComplete="off"
+                disabled={deleting}
+                className="mt-2"
+              />
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => setDeleteConfirm("")}
+                  disabled={deleting}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirm !== "DELETE"}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? "Deleting..." : "Delete account permanently"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
     </div>
+  )
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
+        Loading account...
+      </div>
+    }>
+      <AccountPageContent />
+    </Suspense>
   )
 }
