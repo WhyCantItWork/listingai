@@ -1,281 +1,181 @@
-'use client'
-
-import { toast } from "sonner"
-import { useEffect, useState, Suspense } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import Link from "next/link"
+import { Sparkles, FileCheck, Shield, Download, ArrowRight, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Crown, CreditCard, LogOut, TrendingUp, Mail, AlertTriangle } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-type Tier = "free" | "pro" | "lister"
+const features = [
+  {
+    icon: FileCheck,
+    title: "Material Information ready",
+    description:
+      "Generates Parts A, B, and C-compliant listings out of the box. Filled-in, formatted, ready to paste into Rightmove or Zoopla.",
+  },
+  {
+    icon: Shield,
+    title: "UK lettings compliance",
+    description:
+      "Live scan for Right to Rent, deposit, DSS-discrimination, and Equality Act language. Catches risks before they cost you a fine.",
+  },
+  {
+    icon: Download,
+    title: "Full tenancy pack PDF",
+    description:
+      "One-click export of the listing, the MI table, and a clean cover sheet. Send to landlords or attach to portals in seconds.",
+  },
+]
 
-interface Profile {
-  tier: Tier
-  listings_used: number | null
-  compliance_used: number | null
-}
+const stats = [
+  { value: "Parts A·B·C", label: "Material Information covered" },
+  { value: "60s", label: "From details to listing" },
+  { value: "2024", label: "Mandatory MI rules — built in" },
+  { value: "UK only", label: "Built for British lettings, not retrofitted" },
+]
 
-const TIER_LIMITS: Record<Tier, number | null> = {
-  free: 5,
-  pro: 100,
-  lister: null,
-}
-
-const VAULT_CAPS: Record<Tier, number | null> = {
-  free: 0,
-  pro: 50,
-  lister: null,
-}
-
-const COMPLIANCE_LIMITS: Record<Tier, number | null> = {
-  free: 0,
-  pro: 75,
-  lister: null,
-}
-
-function AccountPageContent() {
-  const [user, setUser] = useState<{ email?: string } | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [portalLoading, setPortalLoading] = useState(false)
-  const [vaultUsed, setVaultUsed] = useState(0)
-
-  const [newEmail, setNewEmail] = useState("")
-  const [emailLoading, setEmailLoading] = useState(false)
-
-  const [deleteConfirm, setDeleteConfirm] = useState("")
-  const [deleting, setDeleting] = useState(false)
-
-  const router = useRouter()
-
-  useEffect(() => {
-    const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push("/auth/login")
-        return
-      }
-      setUser(user)
-      const { data } = await supabase
-        .from("profiles")
-        .select("tier, listings_used, compliance_used")
-        .eq("id", user.id)
-        .single()
-      setProfile(data as Profile)
-      setLoading(false)
-    }
-    load()
-  }, [router])
-
-  useEffect(() => {
-    const loadVaultCount = async () => {
-      try {
-        const res = await fetch("/api/vault")
-        if (res.ok) {
-          const data = await res.json()
-          setVaultUsed((data.listings || []).length)
-        }
-      } catch {
-        setVaultUsed(0)
-      }
-    }
-    loadVaultCount()
-  }, [])
-
-  const handleManageSubscription = async () => {
-    setPortalLoading(true)
-    const res = await fetch("/api/stripe/portal", { method: "POST" })
-    const data = await res.json()
-    if (data.url) {
-      window.location.href = data.url
-    } else {
-      toast.error("Couldn't open billing portal", { description: data.error })
-      setPortalLoading(false)
-    }
-  }
-
-  const handleChangeEmail = async () => {
-    if (!newEmail || !newEmail.includes("@")) {
-      toast.error("Please enter a valid email address")
-      return
-    }
-    if (newEmail === user?.email) {
-      toast.error("That's already your email")
-      return
-    }
-
-    setEmailLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ email: newEmail })
-
-    if (error) {
-      toast.error("Couldn't change email", { description: error.message })
-      setEmailLoading(false)
-      return
-    }
-
-    toast.success("Confirmation sent", {
-      description: `Check ${newEmail} and click the confirmation link to finish the change.`,
-      duration: 8000,
-    })
-    setNewEmail("")
-    setEmailLoading(false)
-  }
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirm !== "DELETE") {
-      toast.error("Type DELETE in capital letters to confirm")
-      return
-    }
-
-    setDeleting(true)
-    try {
-      const res = await fetch("/api/account/delete", { method: "POST" })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error("Couldn't delete account", { description: data.error || "Please try again or contact support." })
-        setDeleting(false)
-        return
-      }
-      toast.success("Account deleted", { description: "Your account and all data have been removed." })
-      window.location.href = "/"
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unknown error"
-      toast.error("Couldn't delete account", { description: msg })
-      setDeleting(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
-  }
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
-        Loading account...
-      </div>
-    )
-  }
-
-  const tier = profile?.tier ?? "free"
-  const totalLimit = TIER_LIMITS[tier]
-  const listingsUsed = profile?.listings_used ?? 0
-  const totalVaultCap = VAULT_CAPS[tier]
-  const complianceLimit = COMPLIANCE_LIMITS[tier]
-  const complianceUsed = profile?.compliance_used ?? 0
-  const remaining = totalLimit === null ? null : Math.max(0, totalLimit - listingsUsed)
-
+export default function LandingPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Your account</h1>
-        <p className="text-muted-foreground mt-1">Manage your subscription and account settings.</p>
-      </div>
+    <div className="flex flex-col">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--color-primary)/0.15,transparent_50%)]" />
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-sm text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span>Built for UK letting agents</span>
+            </div>
+            <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              Material Information–ready listings,{" "}
+              <span className="text-primary">in 60 seconds</span>
+            </h1>
+            <p className="mt-6 text-pretty text-lg text-muted-foreground sm:text-xl">
+              Tenancy generates compliant property descriptions, Material Information tables,
+              and tenancy packs for UK letting agents. Built for Rightmove, Zoopla, and OnTheMarket — out of the box.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Built around the Renters&apos; Rights Act 2025, the Equality Act, and Material Information rules — flags risky listing language before you publish.
+            </p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Account details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Email</span>
-            <span className="font-medium text-foreground">{user?.email}</span>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href="/generator">
+                  Generate a listing
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                <Link href="/pricing">View pricing</Link>
+              </Button>
+            </div>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                No credit card required
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                5 free listings per month
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                Cancel anytime
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Plan</span>
-            <span className="font-medium text-foreground capitalize flex items-center gap-1">
-              {tier !== "free" && <Crown className="h-3.5 w-3.5 text-amber-500" />}
-              {tier}
-            </span>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="border-t border-border bg-secondary/30 py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Everything UK letting agents actually need
+            </h2>
+            <p className="mt-4 text-pretty text-lg text-muted-foreground">
+              Material Information, tenancy packs, and lettings-specific compliance — all in one place.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="mx-auto mt-16 grid max-w-5xl gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature) => (
+              <Card
+                key={feature.title}
+                className="border-border bg-card transition-shadow hover:shadow-lg"
+              >
+                <CardHeader>
+                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <feature.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-foreground">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base text-muted-foreground">
+                    {feature.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {tier !== "free" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Usage this month
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Listings used</span>
-              <span className="font-medium text-foreground">
-                {listingsUsed} {totalLimit === null ? "(unlimited)" : `/ ${totalLimit}`}
-              </span>
-            </div>
-            {totalLimit !== null && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${Math.min(100, (listingsUsed / totalLimit) * 100)}%` }}
-                />
+      {/* Stats */}
+      <section className="border-t border-border py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Built for British lettings — not retrofitted from a US sales tool
+            </h2>
+            <p className="mt-4 text-pretty text-lg text-muted-foreground">
+              British English, GBP, UK property terms (flat, garden, leasehold), and the actual legal framework that applies here.
+            </p>
+          </div>
+          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-8 lg:grid-cols-4">
+            {stats.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl font-bold text-primary sm:text-4xl">
+                  {stat.value}
+                </div>
+                <div className="mt-2 text-sm text-muted-foreground">{stat.label}</div>
               </div>
-            )}
+            ))}
+          </div>
+        </div>
+      </section>
 
-            <div className="flex justify-between text-sm pt-2">
-              <span className="text-muted-foreground">Compliance scans used</span>
-              <span className="font-medium text-foreground">
-                {complianceUsed} {complianceLimit === null ? "(unlimited)" : `/ ${complianceLimit}`}
-              </span>
+      {/* CTA */}
+      <section className="border-t border-border bg-primary py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-balance text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
+              Stop dreading Material Information.
+            </h2>
+            <p className="mt-4 text-pretty text-lg text-primary-foreground/80">
+              Generate your first compliant tenancy listing in 60 seconds. Free to try.
+            </p>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button
+                asChild
+                size="lg"
+                variant="secondary"
+                className="w-full sm:w-auto"
+              >
+                <Link href="/generator">
+                  Try it free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
+              >
+                <Link href="/pricing">See all plans</Link>
+              </Button>
             </div>
-            {complianceLimit !== null && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${Math.min(100, (complianceUsed / complianceLimit) * 100)}%` }}
-                />
-              </div>
-            )}
-
-            <div className="flex justify-between text-sm pt-2">
-              <span className="text-muted-foreground">Vault storage used</span>
-              <span className="font-medium text-foreground">
-                {vaultUsed} {totalVaultCap === null ? "(unlimited)" : `/ ${totalVaultCap}`}
-              </span>
-            </div>
-            {totalVaultCap !== null && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${Math.min(100, (vaultUsed / totalVaultCap) * 100)}%` }}
-                />
-              </div>
-            )}
-
-            {totalLimit !== null && remaining !== null && remaining < 10 && remaining > 0 && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Only {remaining} listings left this month — upgrade to Lister for unlimited.
-              </p>
-            )}
-
-            {complianceLimit !== null && complianceLimit - complianceUsed < 10 && complianceLimit - complianceUsed > 0 && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Only {complianceLimit - complianceUsed} compliance scans left this month — upgrade to Lister for unlimited.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
