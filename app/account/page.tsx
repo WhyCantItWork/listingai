@@ -26,6 +26,7 @@ type Tier = "free" | "pro" | "lister"
 interface Profile {
   tier: Tier
   listings_used: number | null
+  compliance_used: number | null
 }
 
 const TIER_LIMITS: Record<Tier, number | null> = {
@@ -37,6 +38,12 @@ const TIER_LIMITS: Record<Tier, number | null> = {
 const VAULT_CAPS: Record<Tier, number | null> = {
   free: 0,
   pro: 50,
+  lister: null,
+}
+
+const COMPLIANCE_LIMITS: Record<Tier, number | null> = {
+  free: 0,
+  pro: 75,
   lister: null,
 }
 
@@ -66,7 +73,7 @@ function AccountPageContent() {
       setUser(user)
       const { data } = await supabase
         .from("profiles")
-        .select("tier, listings_used")
+        .select("tier, listings_used, compliance_used")
         .eq("id", user.id)
         .single()
       setProfile(data as Profile)
@@ -173,6 +180,8 @@ function AccountPageContent() {
   const totalLimit = TIER_LIMITS[tier]
   const listingsUsed = profile?.listings_used ?? 0
   const totalVaultCap = VAULT_CAPS[tier]
+  const complianceLimit = COMPLIANCE_LIMITS[tier]
+  const complianceUsed = profile?.compliance_used ?? 0
   const remaining = totalLimit === null ? null : Math.max(0, totalLimit - listingsUsed)
 
   return (
@@ -226,6 +235,21 @@ function AccountPageContent() {
             )}
 
             <div className="flex justify-between text-sm pt-2">
+              <span className="text-muted-foreground">Compliance scans used</span>
+              <span className="font-medium text-foreground">
+                {complianceUsed} {complianceLimit === null ? "(unlimited)" : `/ ${complianceLimit}`}
+              </span>
+            </div>
+            {complianceLimit !== null && (
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(100, (complianceUsed / complianceLimit) * 100)}%` }}
+                />
+              </div>
+            )}
+
+            <div className="flex justify-between text-sm pt-2">
               <span className="text-muted-foreground">Vault storage used</span>
               <span className="font-medium text-foreground">
                 {vaultUsed} {totalVaultCap === null ? "(unlimited)" : `/ ${totalVaultCap}`}
@@ -245,10 +269,15 @@ function AccountPageContent() {
                 Only {remaining} listings left this month — upgrade to Lister for unlimited.
               </p>
             )}
+
+            {complianceLimit !== null && complianceLimit - complianceUsed < 10 && complianceLimit - complianceUsed > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Only {complianceLimit - complianceUsed} compliance scans left this month — upgrade to Lister for unlimited.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
-
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -289,7 +318,7 @@ function AccountPageContent() {
           {tier === "free" ? (
             <>
               <p className="text-sm text-muted-foreground">
-                You&apos;re on the Free plan. Upgrade to unlock more listings, vault storage, A/B testing, and more.
+                You&apos;re on the Free plan. Upgrade to unlock more listings, compliance scans, vault storage, A/B testing, and more.
               </p>
               <Button onClick={() => router.push("/pricing")} className="w-full sm:w-auto">
                 See plans
