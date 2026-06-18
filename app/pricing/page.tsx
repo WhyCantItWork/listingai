@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Sparkles, Building2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
-type Tier = 'free' | 'pro' | 'lister' | 'team'
+type Tier = 'free' | 'pro' | 'lister'
 type Interval = 'monthly' | 'yearly'
 
 interface Plan {
@@ -61,18 +61,19 @@ const plans: Plan[] = [
     icon: Building2,
     features: [
       '100 listings per month (20× Free)',
+      '75 compliance scans per month',
+      'Up to 2 variants per generation',
       'All 6 tone presets',
       'Length options (Short/Medium/Long)',
       'Audience targeting',
       'PDF export',
       'Vault storage (50 listings)',
-      'Top up listings & vault when needed',
       'Email support',
     ],
     notIncluded: [
-      'Multiple variants at once',
+      'Unlimited listings',
       'A/B testing sandbox',
-      'Compliance checker',
+      '3 variants at once',
     ],
     cta: 'Subscribe to Pro',
     tier: 'pro',
@@ -87,10 +88,10 @@ const plans: Plan[] = [
     icon: Zap,
     features: [
       'Unlimited listings',
+      'Unlimited compliance scans',
       'Everything in Pro',
       'Generate up to 3 variants at once',
       'A/B testing sandbox',
-      'Compliance checker',
       'Unlimited Vault storage',
       'Priority email support',
     ],
@@ -102,11 +103,15 @@ const plans: Plan[] = [
   },
 ]
 
-
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
-  const [interval, setInterval] = useState<Interval>('monthly')
+  const [interval, setIntervalState] = useState<Interval>('monthly')
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSubscribe = async (tier: Tier) => {
     setLoading(tier)
@@ -124,18 +129,16 @@ export default function PricingPage() {
       return
     }
 
-    // Pick the price ID based on the chosen interval
-const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: string }> = {
-  pro: {
-    monthly: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
-    yearly: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
-  },
-  lister: {
-    monthly: process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID,
-    yearly: process.env.NEXT_PUBLIC_STRIPE_LISTER_YEARLY_PRICE_ID,
-  },
-}
-
+    const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: string }> = {
+      pro: {
+        monthly: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+        yearly: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
+      },
+      lister: {
+        monthly: process.env.NEXT_PUBLIC_STRIPE_LISTER_PRICE_ID,
+        yearly: process.env.NEXT_PUBLIC_STRIPE_LISTER_YEARLY_PRICE_ID,
+      },
+    }
 
     const priceId = priceIdMap[tier][interval]
     if (!priceId) {
@@ -161,7 +164,12 @@ const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: str
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
+      <div
+        className={cn(
+          'mx-auto max-w-2xl text-center transition-all duration-700 ease-out',
+          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        )}
+      >
         <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Built for UK letting agents
         </h1>
@@ -170,53 +178,57 @@ const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: str
         </p>
       </div>
 
-    {/* Monthly / Yearly toggle */}
-<div className="mt-10 flex items-center justify-center gap-3">
-  <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
-    <button
-      onClick={() => setInterval("monthly")}
-      className={cn(
-        "rounded-full px-6 py-2 text-sm font-medium transition-all",
-        interval === "monthly"
-          ? "bg-primary text-primary-foreground shadow"
-          : "text-muted-foreground hover:text-foreground"
-      )}
-    >
-      Monthly
-    </button>
-    <button
-      onClick={() => setInterval("yearly")}
-      className={cn(
-        "rounded-full px-6 py-2 text-sm font-medium transition-all flex items-center gap-1.5",
-        interval === "yearly"
-          ? "bg-primary text-primary-foreground shadow"
-          : "text-muted-foreground hover:text-foreground"
-      )}
-    >
-      Yearly
-      <span className={cn(
-        "rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all",
-        interval === "yearly"
-          ? "bg-emerald-400 text-emerald-950 shadow-md shadow-emerald-500/30"
-          : "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-      )}>
-        −17%
-      </span>
-    </button>
-  </div>
-  {interval === "monthly" && (
-    <div className="hidden sm:flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 animate-pulse">
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 12l-2-2m2 2l4-4m-4 4l4 4M19 12h-14" transform="rotate(180 12 12)"/>
-      </svg>
-      <span className="font-semibold">Save with yearly</span>
-    </div>
-  )}
-</div>
-
+      {/* Monthly / Yearly toggle with sliding thumb */}
+      <div
+        className={cn(
+          'mt-10 flex items-center justify-center gap-3 transition-all duration-700 ease-out',
+          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        )}
+        style={{ transitionDelay: '120ms' }}
+      >
+        <div className="relative inline-flex items-center rounded-full border border-border bg-card p-1 shadow-sm">
+          {/* Sliding thumb */}
+          <span
+            aria-hidden
+            className="absolute top-1 bottom-1 rounded-full bg-primary shadow transition-all duration-300 ease-out"
+            style={{
+              left: interval === 'monthly' ? '4px' : '50%',
+              right: interval === 'yearly' ? '4px' : '50%',
+            }}
+          />
+          <button
+            onClick={() => setIntervalState('monthly')}
+            className={cn(
+              'relative z-10 rounded-full px-6 py-2 text-sm font-medium transition-colors',
+              interval === 'monthly' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setIntervalState('yearly')}
+            className={cn(
+              'relative z-10 flex items-center gap-1.5 rounded-full px-6 py-2 text-sm font-medium transition-colors',
+              interval === 'yearly' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Yearly
+            <span
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all',
+                interval === 'yearly'
+                  ? 'bg-emerald-400 text-emerald-950 shadow-md shadow-emerald-500/30'
+                  : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+              )}
+            >
+              −17%
+            </span>
+          </button>
+        </div>
+      </div>
 
       <div className="mx-auto mt-12 grid max-w-5xl gap-6 lg:grid-cols-3">
-        {plans.map((plan) => {
+        {plans.map((plan, i) => {
           const isFree = plan.tier === 'free'
           const displayPrice = interval === 'yearly' && !isFree ? plan.yearlyPrice : plan.monthlyPrice
           const period = isFree ? 'forever' : interval === 'yearly' ? 'per year' : 'per month'
@@ -225,34 +237,55 @@ const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: str
           return (
             <Card
               key={plan.name}
+              style={{ transitionDelay: `${200 + i * 120}ms` }}
               className={cn(
-                'relative flex flex-col border-border bg-card',
-                plan.highlighted && 'border-2 border-primary shadow-lg lg:scale-105'
+                'group relative flex flex-col border-border bg-card transition-all duration-700 ease-out',
+                'hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5',
+                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10',
+                plan.highlighted &&
+                  'border-2 border-primary shadow-lg shadow-primary/10 lg:scale-105 lg:hover:scale-[1.07]'
               )}
             >
+              {plan.highlighted && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -inset-px -z-10 rounded-xl opacity-40 blur-xl"
+                  style={{
+                    background:
+                      'radial-gradient(60% 60% at 50% 0%, var(--color-primary) 0%, transparent 70%)',
+                  }}
+                />
+              )}
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground whitespace-nowrap">
+                  <span className="rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground whitespace-nowrap shadow-md shadow-primary/20">
                     {plan.badge}
                   </span>
                 </div>
               )}
               <CardHeader className="text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
                   <plan.icon className="h-6 w-6 text-primary" />
                 </div>
                 <CardTitle className="text-xl text-foreground">{plan.name}</CardTitle>
                 <CardDescription className="min-h-[40px]">{plan.description}</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold text-foreground">{displayPrice}</span>
+                  <span
+                    key={displayPrice}
+                    className="inline-block text-4xl font-bold text-foreground animate-[tenancy-rise_0.35s_ease-out]"
+                  >
+                    {displayPrice}
+                  </span>
                   <span className="text-muted-foreground text-sm"> /{period}</span>
                 </div>
-                {showSavings && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-  {plan.monthlyEquivalent}/mo billed annually
-</p>
-
-                )}
+                <p
+                  className={cn(
+                    'mt-1 text-xs text-muted-foreground transition-opacity duration-300',
+                    showSavings ? 'opacity-100' : 'opacity-0'
+                  )}
+                >
+                  {plan.monthlyEquivalent}/mo billed annually
+                </p>
               </CardHeader>
               <CardContent className="flex-1">
                 <ul className="space-y-2.5">
@@ -282,7 +315,7 @@ const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: str
                 <Button
                   onClick={() => handleSubscribe(plan.tier)}
                   disabled={loading === plan.tier}
-                  className="w-full"
+                  className="w-full transition-transform active:scale-[0.98]"
                   variant={plan.highlighted ? 'default' : 'outline'}
                 >
                   {loading === plan.tier ? 'Loading...' : plan.cta}
@@ -293,13 +326,21 @@ const priceIdMap: Record<Exclude<Tier, 'free'>, { monthly?: string; yearly?: str
         })}
       </div>
 
-<div className="mx-auto mt-16 max-w-2xl text-center text-sm text-muted-foreground">
-  <p>All paid plans are billed in GBP. Cancel anytime — no questions asked.</p>
-  {process.env.NEXT_PUBLIC_STRIPE_TEST_MODE === "true" && (
-    <p className="mt-1">Test mode active — use card <code className="bg-muted px-1.5 py-0.5 rounded text-xs">4242 4242 4242 4242</code> to try it out.</p>
-  )}
-</div>
-
+      <div
+        className={cn(
+          'mx-auto mt-16 max-w-2xl text-center text-sm text-muted-foreground transition-all duration-700 ease-out',
+          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        )}
+        style={{ transitionDelay: '600ms' }}
+      >
+        <p>All paid plans are billed in GBP. Cancel anytime — no questions asked.</p>
+        {process.env.NEXT_PUBLIC_STRIPE_TEST_MODE === 'true' && (
+          <p className="mt-1">
+            Test mode active — use card{' '}
+            <code className="bg-muted px-1.5 py-0.5 rounded text-xs">4242 4242 4242 4242</code> to try it out.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
