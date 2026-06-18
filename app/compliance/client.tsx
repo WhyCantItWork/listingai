@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 interface Finding {
@@ -22,8 +23,10 @@ export function ComplianceClient() {
   const [findings, setFindings] = useState<Finding[] | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const pending = localStorage.getItem("tenancy-pending-compliance")
     if (pending) {
       setText(pending)
@@ -66,33 +69,31 @@ export function ComplianceClient() {
   const handleReplace = (finding: Finding) => {
     let idx = text.toLowerCase().indexOf(finding.phrase.toLowerCase())
 
-if (idx === -1) {
-  // Strip markdown (asterisks, underscores, pipes) and punctuation for fuzzy matching
-  const stripMarkdown = (s: string) =>
-    s.toLowerCase()
-      .replace(/[*_|`]/g, "")
-      .replace(/[.,;:!?'"]/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
+    if (idx === -1) {
+      // Strip markdown (asterisks, underscores, pipes) and punctuation for fuzzy matching
+      const stripMarkdown = (s: string) =>
+        s.toLowerCase()
+          .replace(/[*_|`]/g, "")
+          .replace(/[.,;:!?'"]/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
 
-  const fuzzyPhrase = stripMarkdown(finding.phrase)
-  const fuzzyText = stripMarkdown(text)
-  const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
-  if (fuzzyIdx === -1) {
-    toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
-    return
-  }
+      const fuzzyPhrase = stripMarkdown(finding.phrase)
+      const fuzzyText = stripMarkdown(text)
+      const fuzzyIdx = fuzzyText.indexOf(fuzzyPhrase)
+      if (fuzzyIdx === -1) {
+        toast.error("Couldn't locate that phrase", { description: "It may have been edited or already replaced." })
+        return
+      }
 
-  // Try to find the phrase in the original text by looking for the first significant word
-  const significantWords = finding.phrase.replace(/[*_|`]/g, "").trim().split(/\s+/).filter(w => w.length > 2)
-  const anchor = significantWords[0] || finding.phrase.split(/\s+/)[0]
-  idx = text.toLowerCase().indexOf(anchor.toLowerCase())
-  if (idx === -1) {
-    toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
-    return
-  }
-}
-
+      const significantWords = finding.phrase.replace(/[*_|`]/g, "").trim().split(/\s+/).filter(w => w.length > 2)
+      const anchor = significantWords[0] || finding.phrase.split(/\s+/)[0]
+      idx = text.toLowerCase().indexOf(anchor.toLowerCase())
+      if (idx === -1) {
+        toast.error("Couldn't locate that phrase", { description: "Try editing it manually." })
+        return
+      }
+    }
 
     const isRemoval = finding.alternative.trim().toLowerCase() === "[remove this phrase]"
     const replacement = isRemoval ? "" : finding.alternative
@@ -130,14 +131,13 @@ if (idx === -1) {
     if (!findings) return
     let newText = text
     findings.forEach((f) => {
-let idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
-if (idx === -1) {
-  // Strip markdown for fuzzy match
-  const anchor = f.phrase.replace(/[*_|`]/g, "").trim().split(/\s+/).filter(w => w.length > 2)[0]
-  if (!anchor) return
-  idx = newText.toLowerCase().indexOf(anchor.toLowerCase())
-  if (idx === -1) return
-}
+      let idx = newText.toLowerCase().indexOf(f.phrase.toLowerCase())
+      if (idx === -1) {
+        const anchor = f.phrase.replace(/[*_|`]/g, "").trim().split(/\s+/).filter(w => w.length > 2)[0]
+        if (!anchor) return
+        idx = newText.toLowerCase().indexOf(anchor.toLowerCase())
+        if (idx === -1) return
+      }
 
       const isRemoval = f.alternative.trim().toLowerCase() === "[remove this phrase]"
       const replacement = isRemoval ? "" : f.alternative
@@ -165,7 +165,12 @@ if (idx === -1) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div
+      className={cn(
+        "mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-all duration-500 ease-out",
+        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      )}
+    >
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-3xl font-bold text-foreground">
           <Shield className="h-8 w-8 text-primary" />
@@ -193,7 +198,7 @@ if (idx === -1) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={14}
-              className="resize-none text-sm"
+              className="resize-none text-sm transition-colors focus-visible:border-primary"
             />
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>{text.length} characters · {text.trim().split(/\s+/).filter(Boolean).length} words</span>
@@ -204,7 +209,7 @@ if (idx === -1) {
             <Button
               onClick={runCheck}
               disabled={scanning || text.trim().length < 20 || text.length > 8000}
-              className="w-full"
+              className="w-full transition-transform active:scale-[0.98]"
               size="lg"
             >
               {scanning ? (
@@ -214,7 +219,7 @@ if (idx === -1) {
               )}
             </Button>
             {error && (
-              <p className="text-sm text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-md p-3">
+              <p className="text-sm text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-md p-3 animate-[tenancy-rise_0.3s_ease-out]">
                 {error}
               </p>
             )}
@@ -238,13 +243,14 @@ if (idx === -1) {
                   )}
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  {findings === null && "Click Run check to analyse your listing."}
+                  {findings === null && !scanning && "Click Run check to analyse your listing."}
+                  {scanning && "Scanning your listing…"}
                   {findings !== null && findings.length === 0 && "No compliance risks detected."}
                   {findings !== null && findings.length > 0 && "Review and replace problematic phrases."}
                 </CardDescription>
               </div>
               {findings && findings.length > 1 && (
-                <Button size="sm" onClick={handleReplaceAll} variant="outline">
+                <Button size="sm" onClick={handleReplaceAll} variant="outline" className="transition-transform active:scale-[0.97]">
                   <RefreshCw className="mr-2 h-3 w-3" />
                   Fix all
                 </Button>
@@ -253,7 +259,7 @@ if (idx === -1) {
           </CardHeader>
           <CardContent>
             {findings === null && !scanning && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex flex-col items-center justify-center py-12 text-center animate-[tenancy-rise_0.4s_ease-out]">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                   <Shield className="h-8 w-8 text-muted-foreground" />
                 </div>
@@ -263,17 +269,33 @@ if (idx === -1) {
               </div>
             )}
 
+            {/* Shimmer skeleton while scanning */}
             {scanning && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-                <p className="text-sm text-muted-foreground">
-                  Tenancy is reading your listing carefully...
+              <div className="space-y-3">
+                <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  Tenancy is reading your listing carefully…
                 </p>
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-border bg-card/50 p-4 space-y-3"
+                    style={{ animationDelay: `${i * 120}ms` }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="tenancy-shimmer h-5 w-28 rounded-full" />
+                      <div className="tenancy-shimmer h-3 w-16 rounded" />
+                    </div>
+                    <div className="tenancy-shimmer h-4 w-3/4 rounded" />
+                    <div className="tenancy-shimmer h-4 w-1/2 rounded" />
+                    <div className="tenancy-shimmer h-9 w-full rounded-md" />
+                  </div>
+                ))}
               </div>
             )}
 
             {findings !== null && findings.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex flex-col items-center justify-center py-12 text-center animate-[tenancy-pop_0.45s_cubic-bezier(0.34,1.56,0.64,1)]">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
                   <Check className="h-8 w-8 text-green-500" />
                 </div>
@@ -292,7 +314,11 @@ if (idx === -1) {
             {findings !== null && findings.length > 0 && (
               <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
                 {findings.map((f, i) => (
-                  <div key={i} className="rounded-lg border border-border bg-card/50 p-4 space-y-3">
+                  <div
+                    key={`${f.phrase}-${i}`}
+                    style={{ animationDelay: `${i * 70}ms` }}
+                    className="rounded-lg border border-border bg-card/50 p-4 space-y-3 opacity-0 animate-[tenancy-rise_0.4s_ease-out_forwards] transition-shadow hover:shadow-md"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <Badge variant="outline" className={severityColor(f.severity)}>
                         <AlertTriangle className="mr-1 h-3 w-3" />
@@ -315,7 +341,7 @@ if (idx === -1) {
                       onClick={() => handleReplace(f)}
                       variant="secondary"
                       size="sm"
-                      className="w-full justify-start text-left h-auto py-2"
+                      className="w-full justify-start text-left h-auto py-2 transition-transform active:scale-[0.98]"
                     >
                       <RefreshCw className="mr-2 h-3 w-3 shrink-0" />
                       <span className="truncate">
