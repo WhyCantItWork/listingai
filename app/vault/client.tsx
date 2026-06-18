@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -55,6 +56,41 @@ const TIER_CAPS: Record<string, number | null> = {
   lister: null,
 }
 
+function VaultSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-32 sm:px-6 lg:px-8">
+      <div className="mb-8 space-y-2">
+        <div className="tenancy-shimmer h-9 w-40 rounded" />
+        <div className="tenancy-shimmer h-4 w-80 rounded" />
+      </div>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+        <div className="tenancy-shimmer h-10 flex-1 rounded-md" />
+        <div className="tenancy-shimmer h-10 w-[160px] rounded-md" />
+        <div className="tenancy-shimmer h-10 w-[140px] rounded-md" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="tenancy-shimmer h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <div className="tenancy-shimmer h-4 w-2/3 rounded" />
+                <div className="tenancy-shimmer h-3 w-1/3 rounded" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="tenancy-shimmer h-3 w-full rounded" />
+              <div className="tenancy-shimmer h-3 w-full rounded" />
+              <div className="tenancy-shimmer h-3 w-4/5 rounded" />
+            </div>
+            <div className="tenancy-shimmer h-8 w-full rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function VaultClient() {
   const router = useRouter()
   const [listings, setListings] = useState<SavedListing[]>([])
@@ -71,6 +107,7 @@ export function VaultClient() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [previewListing, setPreviewListing] = useState<SavedListing | null>(null)
+  const [firstPaint, setFirstPaint] = useState(true)
 
   const loadVault = useCallback(async () => {
     const res = await fetch("/api/vault")
@@ -172,6 +209,14 @@ export function VaultClient() {
     }
     init()
   }, [router, loadVault, migrateLocalStorage])
+
+  // Turn off the first-paint stagger after the initial cards have animated in
+  useEffect(() => {
+    if (!loading && !migrating && firstPaint) {
+      const t = setTimeout(() => setFirstPaint(false), 1200)
+      return () => clearTimeout(t)
+    }
+  }, [loading, migrating, firstPaint])
 
   const handleCopy = async (id: string, content: string) => {
     await navigator.clipboard.writeText(content)
@@ -330,19 +375,22 @@ export function VaultClient() {
   const overCap = cap !== null && listings.length > cap
 
   if (loading || migrating) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-16 text-center">
-        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-sm text-muted-foreground">
-          {migrating ? "Migrating your saved listings to the cloud..." : "Loading your vault..."}
-        </p>
-      </div>
-    )
+    if (migrating) {
+      return (
+        <div className="mx-auto max-w-7xl px-4 py-16 text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary mb-4" />
+          <p className="text-sm text-muted-foreground">
+            Migrating your saved listings to the cloud...
+          </p>
+        </div>
+      )
+    }
+    return <VaultSkeleton />
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 pb-32 sm:px-6 lg:px-8">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4 animate-[tenancy-rise_0.5s_ease-out]">
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold text-foreground">
             <Archive className="h-8 w-8 text-primary" />
@@ -357,11 +405,11 @@ export function VaultClient() {
             {listings.length}{cap !== null && ` / ${cap}`} listings
           </div>
           {selectionMode ? (
-            <Button variant="outline" size="sm" onClick={() => { setSelectionMode(false); setSelectedIds([]) }}>
+            <Button variant="outline" size="sm" className="transition-transform active:scale-[0.97]" onClick={() => { setSelectionMode(false); setSelectedIds([]) }}>
               <X className="mr-2 h-4 w-4" /> Exit selection
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setSelectionMode(true)} disabled={listings.length < 2}>
+            <Button variant="outline" size="sm" className="transition-transform active:scale-[0.97]" onClick={() => setSelectionMode(true)} disabled={listings.length < 2}>
               <Check className="mr-2 h-4 w-4" /> Select
             </Button>
           )}
@@ -369,7 +417,7 @@ export function VaultClient() {
       </div>
 
       {overCap && (
-        <Card className="mb-6 border-amber-500/30 bg-amber-500/5">
+        <Card className="mb-6 border-amber-500/30 bg-amber-500/5 animate-[tenancy-rise_0.4s_ease-out]">
           <CardContent className="flex items-start gap-3 py-4">
             <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
@@ -382,11 +430,11 @@ export function VaultClient() {
         </Card>
       )}
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row animate-[tenancy-rise_0.5s_ease-out]" style={{ animationDelay: "60ms" }}>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search by address, title, or content..." value={search}
-            onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            onChange={(e) => setSearch(e.target.value)} className="pl-10 transition-colors focus-visible:border-primary" />
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -416,7 +464,7 @@ export function VaultClient() {
       </div>
 
       {filteredListings.length === 0 ? (
-        <Card className="border-border bg-card">
+        <Card className="border-border bg-card animate-[tenancy-pop_0.4s_cubic-bezier(0.34,1.56,0.64,1)]">
           <CardContent className="flex flex-col items-center justify-center py-20">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <Archive className="h-8 w-8 text-primary" />
@@ -430,7 +478,7 @@ export function VaultClient() {
                 : "Try clearing your search or changing the filter."}
             </p>
             {listings.length === 0 && (
-              <Button className="mt-6" onClick={() => router.push("/generator")}>
+              <Button className="mt-6 transition-transform active:scale-[0.98]" onClick={() => router.push("/generator")}>
                 Generate a listing
               </Button>
             )}
@@ -438,7 +486,7 @@ export function VaultClient() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredListings.map((listing) => {
+          {filteredListings.map((listing, i) => {
             const meta = propertyTypeMeta[listing.property_type || ""] || { label: "Property", icon: Building2 }
             const Icon = meta.icon
             const isSelected = selectedIds.includes(listing.id)
@@ -447,15 +495,20 @@ export function VaultClient() {
             return (
               <Card
                 key={listing.id}
-                className={`border-border bg-card transition-all hover:shadow-md ${
-                  selectionMode ? "cursor-pointer" : ""
-                } ${isSelected ? "border-primary ring-2 ring-primary/20" : ""}`}
+                style={firstPaint ? { animationDelay: `${Math.min(i, 11) * 60}ms` } : undefined}
+                className={cn(
+                  "group border-border bg-card transition-all duration-300",
+                  "hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5",
+                  firstPaint && "opacity-0 animate-[tenancy-rise_0.45s_ease-out_forwards]",
+                  selectionMode && "cursor-pointer",
+                  isSelected && "border-primary ring-2 ring-primary/20"
+                )}
                 onClick={selectionMode ? () => toggleSelection(listing.id) : undefined}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0 transition-transform duration-300 group-hover:scale-105">
                         <Icon className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -469,10 +522,11 @@ export function VaultClient() {
                       </div>
                     </div>
                     {selectionMode && (
-                      <div className={`flex h-5 w-5 items-center justify-center rounded border-2 flex-shrink-0 ${
+                      <div className={cn(
+                        "flex h-5 w-5 items-center justify-center rounded border-2 flex-shrink-0 transition-colors",
                         isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
-                      }`}>
-                        {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                      )}>
+                        {isSelected && <Check className="h-3 w-3 text-primary-foreground animate-[tenancy-pop_0.2s_ease-out]" />}
                       </div>
                     )}
                   </div>
@@ -480,14 +534,14 @@ export function VaultClient() {
 
                 <CardContent>
                   {editingId === listing.id ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 animate-[tenancy-rise_0.3s_ease-out]">
                       <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
                         placeholder="Title (e.g. 'Clapham flat — luxury tone')" className="text-sm" />
                       <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)}
                         rows={8} className="resize-none text-sm" />
                     </div>
                   ) : (
-                    <p className="line-clamp-5 whitespace-pre-wrap text-sm text-muted-foreground cursor-pointer"
+                    <p className="line-clamp-5 whitespace-pre-wrap text-sm text-muted-foreground cursor-pointer transition-colors hover:text-foreground/80"
                       onClick={() => !selectionMode && setPreviewListing(listing)}>
                       {listing.content}
                     </p>
@@ -501,7 +555,7 @@ export function VaultClient() {
                   </div>
 
                   {!selectionMode && (
-                    <div className="flex items-center gap-0.5">
+                    <div className="flex items-center gap-0.5 transition-opacity duration-200 sm:opacity-60 sm:group-hover:opacity-100">
                       {editingId === listing.id ? (
                         <>
                           <Button size="icon" variant="ghost" onClick={() => handleSaveEdit(listing.id)} className="h-8 w-8">
@@ -516,7 +570,7 @@ export function VaultClient() {
                           <Button size="icon" variant="ghost"
                             onClick={(e) => { e.stopPropagation(); handleCopy(listing.id, listing.content) }}
                             className="h-8 w-8" title="Copy">
-                            {copiedId === listing.id ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                            {copiedId === listing.id ? <Check className="h-4 w-4 text-primary animate-[tenancy-pop_0.25s_ease-out]" /> : <Copy className="h-4 w-4" />}
                           </Button>
                           <Button size="icon" variant="ghost"
                             onClick={(e) => { e.stopPropagation(); handleEdit(listing) }}
@@ -569,7 +623,7 @@ export function VaultClient() {
       )}
 
       {selectionMode && selectedIds.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur p-4 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur p-4 shadow-lg animate-[tenancy-slide-up_0.3s_ease-out]">
           <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm font-medium text-foreground">
               {selectedIds.length} selected
@@ -577,13 +631,13 @@ export function VaultClient() {
               {selectedIds.length > 2 && <span className="ml-2 text-amber-500">— pick exactly 2 to A/B test</span>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={sendToABTest} disabled={selectedIds.length !== 2 || tier !== "lister"}>
+              <Button onClick={sendToABTest} disabled={selectedIds.length !== 2 || tier !== "lister"} className="transition-transform active:scale-[0.97]">
                 <Split className="mr-2 h-4 w-4" />
                 {tier !== "lister" ? "A/B Test (Lister)" : "Compare in A/B Test"}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
+                  <Button variant="destructive" className="transition-transform active:scale-[0.97]">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete {selectedIds.length}
                   </Button>
