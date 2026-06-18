@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       .eq("id", user.id)
       .single()
 
-    if (!profile || (profile.tier !== "lister" && profile.tier !== "team")) {
+    if (!profile || profile.tier !== "lister") {
       return NextResponse.json({ error: "A/B testing requires the Lister plan." }, { status: 403 })
     }
 

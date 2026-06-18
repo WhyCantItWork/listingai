@@ -201,7 +201,7 @@ TENANCY TERMS
 RULES
 • Sound human, never templated. British English throughout.
 • Comply with Equality Act 2010 — no preferences for nationality, family makeup, age, religion, etc.
-• Comply with the Renters' Rights Act 2025 (in force from 1 May 2026):
+• Comply with the Renters' Rights Act 2025 (now in force, since 1 May 2026):
   – No language banning or discouraging children, families, or benefit recipients (now explicitly illegal).
   – No mention of rental bidding, "offers over", "best and final offer", or competitive bidding — banned.
   – No mention of rent paid months in advance or large upfront payments — restricted.

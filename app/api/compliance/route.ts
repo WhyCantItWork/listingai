@@ -106,7 +106,7 @@ EXCLUSIONARY TENANT TYPES (high severity):
 • "non-smokers only" (smoking can be restricted in tenancy agreement, not pre-screened)
 • "mature tenants" / "young tenants" (age discrimination)
 
-RENTERS' RIGHTS ACT 2025 BREACHES (high severity — in force from 1 May 2026):
+RENTERS' RIGHTS ACT 2025 BREACHES (high severity — now in force, since 1 May 2026):
 • "No children" / "no kids" / "child-free home" / "no families" — banned under the new Act.
 • "No DSS" / "no benefits" / "no Universal Credit" / "no housing benefit" — banned (was already illegal, now codified).
 • "Offers over", "best and final offer", "rental bidding", "highest bidder", "competitive bids" — rental bidding is banned.
