@@ -1,6 +1,4 @@
-const FreeCheckClient = () => {
-  return null
-}
+import { FreeCheckClient } from "./client"
 
 export const metadata = {
   title: "Free Renters' Rights Act Checker · Tenancy",
