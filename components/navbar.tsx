@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Sparkles, Archive, Split, Shield, CreditCard, Sun, Moon, Crown, Zap, Menu, X, User, LogOut } from "lucide-react"
+import { Home, Sparkles, Archive, Split, Shield, CreditCard, Sun, Moon, Crown, Zap, Menu, X, User, LogOut, ScanLine } from "lucide-react"
 import { useTheme, type Theme } from "@/lib/theme-context"
 import { Button } from "@/components/ui/button"
 import {
@@ -66,6 +66,8 @@ export function Navbar() {
     router.refresh()
   }
 
+  const freeCheckActive = pathname === "/free-check"
+
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -98,6 +100,20 @@ export function Navbar() {
                 </Link>
               )
             })}
+
+            {/* Free Checker — highlighted funnel link */}
+            <Link
+              href="/free-check"
+              className={cn(
+                "ml-1 flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-all",
+                freeCheckActive
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+              )}
+            >
+              <ScanLine className="h-4 w-4" />
+              Free Checker
+            </Link>
           </div>
 
           {/* Right side: theme + account + mobile menu */}
@@ -186,6 +202,21 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="border-t border-border py-4 md:hidden">
             <div className="flex flex-col gap-1">
+              {/* Free Checker — top of mobile menu, highlighted */}
+              <Link
+                href="/free-check"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-colors",
+                  freeCheckActive
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-primary/40 bg-primary/10 text-primary"
+                )}
+              >
+                <ScanLine className="h-4 w-4" />
+                Free RRA Checker
+              </Link>
+
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (

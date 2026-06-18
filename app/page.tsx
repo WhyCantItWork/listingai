@@ -11,7 +11,9 @@ import {
   CheckCircle2,
   Zap,
   ScrollText,
+  ScanLine,
 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 
 const features = [
@@ -138,10 +140,17 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+              <Button asChild size="lg" variant="outline" className="group w-full sm:w-auto">
+                <Link href="/free-check">
+                  <ScanLine className="mr-2 h-4 w-4" />
+                  Check my advert free
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg" className="w-full sm:w-auto">
                 <Link href="/pricing">View pricing</Link>
               </Button>
             </div>
+
 
             <div className="tenancy-rise tenancy-rise-4 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
