@@ -5,7 +5,6 @@ const VAULT_CAPS: Record<string, number | null> = {
   free: 0,
   pro: 50,
   lister: null,
-  team: null,
 }
 
 // GET /api/vault — list all the user's saved listings
@@ -51,18 +50,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Listing content is required." }, { status: 400 })
     }
 
-    // Check vault cap (base + bonus)
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("tier, bonus_vault_slots, bonus_vault_expires_at")
+      .select("tier")
       .eq("id", user.id)
       .single()
 
-    if (!profile) {
+    if (profileError || !profile) {
+      console.error("Vault profile lookup error:", profileError)
       return NextResponse.json({ error: "Profile not found." }, { status: 404 })
     }
-
-    const baseCap = VAULT_CAPS[profile.tier] ?? null
 
     // Free can't save
     if (profile.tier === "free") {
@@ -72,12 +69,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Compute effective cap including any active bonus
-    const now = new Date()
-    const bonusExpiresAt = profile.bonus_vault_expires_at ? new Date(profile.bonus_vault_expires_at) : null
-    const bonusActive = bonusExpiresAt && bonusExpiresAt > now
-    const activeBonus = bonusActive ? (profile.bonus_vault_slots || 0) : 0
-    const effectiveCap = baseCap === null ? null : baseCap + activeBonus
+    const effectiveCap = VAULT_CAPS[profile.tier] ?? null
 
     // Count current listings if there's a cap
     if (effectiveCap !== null) {
@@ -90,7 +82,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: "vault_full",
-            message: `Your vault is full (${count} / ${effectiveCap}). Buy a vault top-up on your Account page or upgrade to Lister for unlimited storage.`,
+            message: `Your vault is full (${count} / ${effectiveCap}). Upgrade to Lister for unlimited storage.`,
             used: count,
             limit: effectiveCap,
           },
