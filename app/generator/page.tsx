@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Home,
   Building2,
@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 
 import jsPDF from "jspdf"
 
@@ -186,6 +187,35 @@ interface Variant {
   audience: string
 }
 
+// Typewriter reveal for generated output
+function useTypewriter(full: string, active: boolean, speed = 12) {
+  const [shown, setShown] = useState(full)
+  const raf = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!active) {
+      setShown(full)
+      return
+    }
+    const words = full.split(/(\s+)/)
+    let i = 0
+    setShown("")
+    const tick = () => {
+      i += 2 // word + following whitespace
+      setShown(words.slice(0, i).join(""))
+      if (i < words.length) {
+        raf.current = window.setTimeout(tick, speed) as unknown as number
+      }
+    }
+    tick()
+    return () => {
+      if (raf.current) clearTimeout(raf.current)
+    }
+  }, [full, active, speed])
+
+  return shown
+}
+
 export default function GeneratorPage() {
   const [formData, setFormData] = useState<FormData>({
     propertyType: "",
@@ -223,6 +253,7 @@ export default function GeneratorPage() {
   })
 
   const [output, setOutput] = useState("")
+  const [justGenerated, setJustGenerated] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
@@ -232,6 +263,13 @@ export default function GeneratorPage() {
   const [variants, setVariants] = useState<Variant[]>([])
   const [activeVariant, setActiveVariant] = useState(0)
   const [vaultFull, setVaultFull] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  const displayedOutput = useTypewriter(output, justGenerated)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const loadUser = async () => {
@@ -282,6 +320,7 @@ export default function GeneratorPage() {
 
   const handleGenerate = async () => {
     setIsGenerating(true)
+    setJustGenerated(false)
     setOutput("")
     setSavedVariants([])
     setVariants([])
@@ -306,6 +345,7 @@ export default function GeneratorPage() {
       }))
       setVariants(newVariants)
       setActiveVariant(0)
+      setJustGenerated(true)
       setOutput(newVariants[0]?.content || "")
       if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
     } catch (error) {
@@ -344,7 +384,10 @@ export default function GeneratorPage() {
         next[idx] = newVariant
         return next
       })
-      if (idx === activeVariant) setOutput(newVariant.content)
+      if (idx === activeVariant) {
+        setJustGenerated(true)
+        setOutput(newVariant.content)
+      }
       setSavedVariants((prev) => prev.filter((i) => i !== idx))
       if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
       toast.success("Regenerated", { description: `New ${newTone} version for ${newAudience.replace(/-/g, " ")}.` })
@@ -652,11 +695,17 @@ export default function GeneratorPage() {
   const isCurrentSaved = savedVariants.includes(activeVariant)
   const allSaved = variants.length > 0 && variants.every((_, i) => savedVariants.includes(i))
 
-  // Max variants based on tier: free=1, pro=2, lister=3
   const maxVariants = tier === "lister" ? 3 : tier === "pro" ? 2 : 1
 
+  const sectionCls = "space-y-4 animate-[tenancy-rise_0.5s_ease-out_both]"
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div
+      className={cn(
+        "mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 transition-all duration-500 ease-out",
+        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      )}
+    >
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Tenancy Listing Generator</h1>
         <p className="mt-2 text-muted-foreground">
@@ -677,7 +726,7 @@ export default function GeneratorPage() {
           </CardHeader>
           <CardContent className="space-y-8">
 
-            <div className="space-y-4">
+            <div className={sectionCls} style={{ animationDelay: "40ms" }}>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">1. Property basics</h3>
 
               <div className="space-y-2">
@@ -730,7 +779,7 @@ export default function GeneratorPage() {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className={cn(sectionCls, "pt-2 border-t border-border")} style={{ animationDelay: "100ms" }}>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">2. Material Information — Part A</h3>
 
               <div className="grid grid-cols-2 gap-4">
@@ -768,7 +817,7 @@ export default function GeneratorPage() {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className={cn(sectionCls, "pt-2 border-t border-border")} style={{ animationDelay: "160ms" }}>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">3. Material Information — Part B</h3>
 
               <div className="space-y-2">
@@ -834,7 +883,7 @@ export default function GeneratorPage() {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className={cn(sectionCls, "pt-2 border-t border-border")} style={{ animationDelay: "220ms" }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">4. Material Information — Part C</h3>
                 <div className="flex items-center gap-2">
@@ -845,7 +894,7 @@ export default function GeneratorPage() {
               </div>
 
               {formData.hasPartC && (
-                <div className="space-y-4 pl-2 border-l-2 border-amber-500/30">
+                <div className="space-y-4 pl-2 border-l-2 border-amber-500/30 animate-[tenancy-rise_0.35s_ease-out]">
                   <p className="text-xs text-muted-foreground flex items-start gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                     Part C must be disclosed if any of these apply to the property.
@@ -881,7 +930,7 @@ export default function GeneratorPage() {
               )}
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className={cn(sectionCls, "pt-2 border-t border-border")} style={{ animationDelay: "280ms" }}>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">5. Tenancy specifics</h3>
 
               <div className="grid grid-cols-2 gap-4">
@@ -940,7 +989,7 @@ export default function GeneratorPage() {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className={cn(sectionCls, "pt-2 border-t border-border")} style={{ animationDelay: "340ms" }}>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">6. Style &amp; tone</h3>
 
               <div className="space-y-2">
@@ -1046,7 +1095,7 @@ export default function GeneratorPage() {
 
             <Button onClick={handleGenerate}
               disabled={isGenerating || !formData.propertyType || !formData.address || !formData.rent}
-              className="w-full" size="lg">
+              className="w-full transition-transform active:scale-[0.98]" size="lg">
               {isGenerating ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
               ) : (
@@ -1056,7 +1105,7 @@ export default function GeneratorPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card">
+        <Card className="border-border bg-card lg:sticky lg:top-8 self-start">
           <CardHeader>
             <CardTitle className="text-foreground">Generated Listing</CardTitle>
             <CardDescription>Your AI-generated tenancy description will appear here.</CardDescription>
@@ -1072,7 +1121,8 @@ export default function GeneratorPage() {
                       key={i}
                       size="sm"
                       variant={activeVariant === i ? "default" : "outline"}
-                      onClick={() => { setActiveVariant(i); setOutput(v.content); }}
+                      className="transition-transform active:scale-[0.97]"
+                      onClick={() => { setActiveVariant(i); setJustGenerated(false); setOutput(v.content); }}
                     >
                       V{i + 1}
                       {savedVariants.includes(i) && <Check className="ml-1 h-3 w-3" />}
@@ -1083,8 +1133,17 @@ export default function GeneratorPage() {
             )}
 
             <div className="min-h-[400px] rounded-lg border border-border bg-secondary/30 p-4">
-              {output ? (
-                <p className="whitespace-pre-wrap text-foreground">{output}</p>
+              {isGenerating ? (
+                <div className="space-y-2.5">
+                  {[
+                    "w-1/3", "w-full", "w-11/12", "w-4/5", "w-full",
+                    "w-3/4", "w-full", "w-2/3", "w-full", "w-1/2",
+                  ].map((w, i) => (
+                    <div key={i} className={cn("tenancy-shimmer h-4 rounded", w)} />
+                  ))}
+                </div>
+              ) : output ? (
+                <p className="whitespace-pre-wrap text-foreground">{displayedOutput}</p>
               ) : (
                 <p className="text-muted-foreground">
                   Fill in the property details and click &quot;Generate tenancy listing&quot; to see your AI-crafted description.
@@ -1154,14 +1213,14 @@ export default function GeneratorPage() {
 
             {output && (
               <div className="flex gap-3 flex-wrap pt-2">
-                <Button onClick={handleCopy} variant="outline" className="flex-1 min-w-[120px]">
-                  {copied ? (<><Check className="mr-2 h-4 w-4" /> Copied!</>) : (<><Copy className="mr-2 h-4 w-4" /> Copy</>)}
+                <Button onClick={handleCopy} variant="outline" className="flex-1 min-w-[120px] transition-transform active:scale-[0.97]">
+                  {copied ? (<><Check className="mr-2 h-4 w-4 animate-[tenancy-pop_0.3s_ease-out]" /> Copied!</>) : (<><Copy className="mr-2 h-4 w-4" /> Copy</>)}
                 </Button>
 
                 <Button
                   onClick={handleSaveCurrentVariant}
                   variant="outline"
-                  className="flex-1 min-w-[120px]"
+                  className="flex-1 min-w-[120px] transition-transform active:scale-[0.97]"
                   disabled={isCurrentSaved || vaultFull}
                 >
                   {isCurrentSaved ? (
@@ -1177,7 +1236,7 @@ export default function GeneratorPage() {
                   <Button
                     onClick={handleSaveAllVariants}
                     variant="outline"
-                    className="flex-1 min-w-[120px]"
+                    className="flex-1 min-w-[120px] transition-transform active:scale-[0.97]"
                     disabled={allSaved || vaultFull}
                   >
                     {allSaved ? (
@@ -1188,7 +1247,7 @@ export default function GeneratorPage() {
                   </Button>
                 )}
 
-                <Button onClick={handleDownloadPDF} variant="outline" className="flex-1 min-w-[120px]" disabled={tier === "free"}>
+                <Button onClick={handleDownloadPDF} variant="outline" className="flex-1 min-w-[120px] transition-transform active:scale-[0.97]" disabled={tier === "free"}>
                   <Download className="mr-2 h-4 w-4" />
                   {tier === "free" ? (
                     <>PDF <span className="ml-2 text-[10px] uppercase font-bold bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">Pro</span></>
