@@ -24,20 +24,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Profile not found." }, { status: 404 })
     }
 
-    const COMPLIANCE_LIMITS: Record<string, number | null> = {
-      free: 0,
-      pro: 75,
-      lister: null,
-    }
+const COMPLIANCE_LIMITS: Record<string, number | null> = {
+  free: 0,
+  pro: 75,
+  lister: null, // unlimited
+}
 
-    const complianceLimit = COMPLIANCE_LIMITS[profile.tier] ?? 0
+// Free (or any unknown tier) has no access. Lister = null = unlimited.
+if (profile.tier === "free" || !(profile.tier in COMPLIANCE_LIMITS)) {
+  return NextResponse.json(
+    { error: "Compliance Checker requires Pro (75/month) or Lister (unlimited). Upgrade to unlock." },
+    { status: 403 }
+  )
+}
 
-    if (complianceLimit === 0) {
-      return NextResponse.json(
-        { error: "Compliance Checker requires Pro (75/month) or Lister (unlimited). Upgrade to unlock." },
-        { status: 403 }
-      )
-    }
+const complianceLimit = COMPLIANCE_LIMITS[profile.tier]
+
 
     const resetAt = profile.compliance_reset_at ? new Date(profile.compliance_reset_at) : new Date()
     const daysSinceReset = (Date.now() - resetAt.getTime()) / (1000 * 60 * 60 * 24)
