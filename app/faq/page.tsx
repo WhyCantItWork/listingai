@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { ChevronDown, HelpCircle, Mail } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -228,6 +228,46 @@ const faqs: FAQ[] = [
   },
 ]
 
+function Reveal({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode
+  delay?: number
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShown(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={cn(
+        "transition-all duration-700 ease-out",
+        shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
 export default function FAQPage() {
   const [openIdx, setOpenIdx] = useState<number | null>(0)
 
@@ -236,13 +276,13 @@ export default function FAQPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="mb-12 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 animate-[tenancy-rise_0.6s_ease-out]">
           <HelpCircle className="h-6 w-6 text-primary" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl animate-[tenancy-rise_0.6s_ease-out]">
           Frequently asked questions
         </h1>
-        <p className="mt-4 text-muted-foreground">
+        <p className="mt-4 text-muted-foreground animate-[tenancy-rise_0.6s_ease-out]">
           Everything you need to know about Tenancy. Can&apos;t find what you&apos;re looking for?{" "}
           <a href="mailto:vr047836@gmail.com" className="text-primary underline">
             Email us
@@ -252,59 +292,77 @@ export default function FAQPage() {
       </div>
 
       <div className="space-y-10">
-        {categories.map((category) => (
-          <div key={category}>
+        {categories.map((category, ci) => (
+          <Reveal key={category} delay={ci * 80}>
             <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
               {category}
             </h2>
-            <Card>
+            <Card className="transition-shadow duration-300 hover:shadow-md">
               <CardContent className="divide-y divide-border p-0">
                 {faqs
                   .map((f, i) => ({ ...f, idx: i }))
                   .filter((f) => f.category === category)
-                  .map((f) => (
-                    <button
-                      key={f.idx}
-                      onClick={() => setOpenIdx(openIdx === f.idx ? null : f.idx)}
-                      className="w-full text-left"
-                    >
-                      <div className="flex items-center justify-between p-5 hover:bg-muted/30 transition-colors">
-                        <span className="font-medium text-foreground pr-4">{f.question}</span>
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 text-muted-foreground shrink-0 transition-transform",
-                            openIdx === f.idx && "rotate-180"
-                          )}
-                        />
-                      </div>
-                      {openIdx === f.idx && (
-                        <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">
-                          {f.answer}
+                  .map((f) => {
+                    const isOpen = openIdx === f.idx
+                    return (
+                      <button
+                        key={f.idx}
+                        onClick={() => setOpenIdx(isOpen ? null : f.idx)}
+                        className="group w-full text-left"
+                        aria-expanded={isOpen}
+                      >
+                        <div className="flex items-center justify-between p-5 transition-colors group-hover:bg-muted/30">
+                          <span className="font-medium text-foreground pr-4 transition-colors group-hover:text-primary">
+                            {f.question}
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-300 ease-out",
+                              isOpen && "rotate-180 text-primary"
+                            )}
+                          />
                         </div>
-                      )}
-                    </button>
-                  ))}
+                        {/* Animated height + fade panel */}
+                        <div
+                          className={cn(
+                            "grid transition-all duration-300 ease-out",
+                            isOpen
+                              ? "grid-rows-[1fr] opacity-100"
+                              : "grid-rows-[0fr] opacity-0"
+                          )}
+                        >
+                          <div className="overflow-hidden">
+                            <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">
+                              {f.answer}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
               </CardContent>
             </Card>
-          </div>
+          </Reveal>
         ))}
       </div>
 
-      <Card className="mt-12 border-primary/30 bg-primary/5">
-        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-          <Mail className="h-8 w-8 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">Still got questions?</h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            We aim to reply to every email within one working day.
-          </p>
-          <a
-            href="mailto:vr047836@gmail.com"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition"
-          >
-            Email support
-          </a>
-        </CardContent>
-      </Card>
+      <Reveal delay={100}>
+        <Card className="mt-12 border-primary/30 bg-primary/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+          <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+            <Mail className="h-8 w-8 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Still got questions?</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              We aim to reply to every email within one working day.
+            </p>
+            <a
+              href="mailto:vr047836@gmail.com"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 active:scale-[0.98]"
+            >
+              Email support
+            </a>
+          </CardContent>
+        </Card>
+      </Reveal>
 
       <div className="mt-8 text-center">
         <Link href="/" className="text-sm text-primary underline">

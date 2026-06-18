@@ -178,22 +178,21 @@ export default function PricingPage() {
         </p>
       </div>
 
-      {/* Monthly / Yearly toggle with sliding thumb */}
+            {/* Monthly / Yearly toggle */}
       <div
         className={cn(
-          'mt-10 flex items-center justify-center gap-3 transition-all duration-700 ease-out',
+          'mt-10 flex items-center justify-center transition-all duration-700 ease-out',
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
         )}
         style={{ transitionDelay: '120ms' }}
       >
-        <div className="relative inline-flex items-center rounded-full border border-border bg-card p-1 shadow-sm">
-          {/* Sliding thumb */}
+        <div className="relative grid grid-cols-2 rounded-full border border-border bg-card p-1 shadow-sm">
+          {/* Sliding thumb — exactly half the track, offset by the padding */}
           <span
             aria-hidden
-            className="absolute top-1 bottom-1 rounded-full bg-primary shadow transition-all duration-300 ease-out"
+            className="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-primary shadow transition-transform duration-300 ease-out"
             style={{
-              left: interval === 'monthly' ? '4px' : '50%',
-              right: interval === 'yearly' ? '4px' : '50%',
+              transform: interval === 'yearly' ? 'translateX(100%)' : 'translateX(0)',
             }}
           />
           <button
@@ -208,24 +207,23 @@ export default function PricingPage() {
           <button
             onClick={() => setIntervalState('yearly')}
             className={cn(
-              'relative z-10 flex items-center gap-1.5 rounded-full px-6 py-2 text-sm font-medium transition-colors',
+              'relative z-10 flex items-center justify-center gap-1.5 rounded-full px-6 py-2 text-sm font-medium transition-colors',
               interval === 'yearly' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Yearly
             <span
               className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all',
-                interval === 'yearly'
-                  ? 'bg-emerald-400 text-emerald-950 shadow-md shadow-emerald-500/30'
-                  : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                'text-xs font-semibold transition-colors',
+                interval === 'yearly' ? 'text-primary-foreground/80' : 'text-emerald-600 dark:text-emerald-400'
               )}
             >
-              −17%
+              save 17%
             </span>
           </button>
         </div>
       </div>
+
 
       <div className="mx-auto mt-12 grid max-w-5xl gap-6 lg:grid-cols-3">
         {plans.map((plan, i) => {
