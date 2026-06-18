@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Crown, CreditCard, LogOut, TrendingUp, Mail, AlertTriangle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,44 @@ const COMPLIANCE_LIMITS: Record<Tier, number | null> = {
   free: 0,
   pro: 75,
   lister: null,
+}
+
+function UsageBar({ used, limit }: { used: number; limit: number }) {
+  const [width, setWidth] = useState(0)
+  const target = Math.min(100, (used / limit) * 100)
+
+  useEffect(() => {
+    // Animate from 0 to target on mount
+    const raf = requestAnimationFrame(() => setWidth(target))
+    return () => cancelAnimationFrame(raf)
+  }, [target])
+
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-out"
+        style={{ width: `${width}%` }}
+      />
+    </div>
+  )
+}
+
+function AccountSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-16 space-y-6">
+      <div className="space-y-2">
+        <div className="tenancy-shimmer h-8 w-48 rounded" />
+        <div className="tenancy-shimmer h-4 w-72 rounded" />
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <div className="tenancy-shimmer h-5 w-40 rounded" />
+          <div className="tenancy-shimmer h-3 w-full rounded" />
+          <div className="tenancy-shimmer h-3 w-2/3 rounded" />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function AccountPageContent() {
@@ -169,11 +208,7 @@ function AccountPageContent() {
   }
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
-        Loading account...
-      </div>
-    )
+    return <AccountSkeleton />
   }
 
   const tier = profile?.tier ?? "free"
@@ -184,14 +219,17 @@ function AccountPageContent() {
   const complianceUsed = profile?.compliance_used ?? 0
   const remaining = totalLimit === null ? null : Math.max(0, totalLimit - listingsUsed)
 
+  // Staggered card entrance helper
+  const cardEnter = "animate-[tenancy-rise_0.5s_ease-out_both]"
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 space-y-6">
-      <div>
+      <div className="animate-[tenancy-rise_0.5s_ease-out]">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Your account</h1>
         <p className="text-muted-foreground mt-1">Manage your subscription and account settings.</p>
       </div>
 
-      <Card>
+      <Card className={cn(cardEnter, "transition-shadow hover:shadow-md")} style={{ animationDelay: "60ms" }}>
         <CardHeader>
           <CardTitle className="text-lg">Account details</CardTitle>
         </CardHeader>
@@ -211,7 +249,7 @@ function AccountPageContent() {
       </Card>
 
       {tier !== "free" && (
-        <Card>
+        <Card className={cn(cardEnter, "transition-shadow hover:shadow-md")} style={{ animationDelay: "120ms" }}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -225,14 +263,7 @@ function AccountPageContent() {
                 {listingsUsed} {totalLimit === null ? "(unlimited)" : `/ ${totalLimit}`}
               </span>
             </div>
-            {totalLimit !== null && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${Math.min(100, (listingsUsed / totalLimit) * 100)}%` }}
-                />
-              </div>
-            )}
+            {totalLimit !== null && <UsageBar used={listingsUsed} limit={totalLimit} />}
 
             <div className="flex justify-between text-sm pt-2">
               <span className="text-muted-foreground">Compliance scans used</span>
@@ -240,14 +271,7 @@ function AccountPageContent() {
                 {complianceUsed} {complianceLimit === null ? "(unlimited)" : `/ ${complianceLimit}`}
               </span>
             </div>
-            {complianceLimit !== null && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${Math.min(100, (complianceUsed / complianceLimit) * 100)}%` }}
-                />
-              </div>
-            )}
+            {complianceLimit !== null && <UsageBar used={complianceUsed} limit={complianceLimit} />}
 
             <div className="flex justify-between text-sm pt-2">
               <span className="text-muted-foreground">Vault storage used</span>
@@ -255,14 +279,7 @@ function AccountPageContent() {
                 {vaultUsed} {totalVaultCap === null ? "(unlimited)" : `/ ${totalVaultCap}`}
               </span>
             </div>
-            {totalVaultCap !== null && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${Math.min(100, (vaultUsed / totalVaultCap) * 100)}%` }}
-                />
-              </div>
-            )}
+            {totalVaultCap !== null && <UsageBar used={vaultUsed} limit={totalVaultCap} />}
 
             {totalLimit !== null && remaining !== null && remaining < 10 && remaining > 0 && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -278,7 +295,8 @@ function AccountPageContent() {
           </CardContent>
         </Card>
       )}
-      <Card>
+
+      <Card className={cn(cardEnter, "transition-shadow hover:shadow-md")} style={{ animationDelay: "180ms" }}>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
@@ -298,19 +316,20 @@ function AccountPageContent() {
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               disabled={emailLoading}
+              className="transition-colors focus-visible:border-primary"
             />
           </div>
           <Button
             onClick={handleChangeEmail}
             disabled={emailLoading || !newEmail}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto transition-transform active:scale-[0.98]"
           >
             {emailLoading ? "Sending..." : "Send confirmation"}
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className={cn(cardEnter, "transition-shadow hover:shadow-md")} style={{ animationDelay: "240ms" }}>
         <CardHeader>
           <CardTitle className="text-lg">Subscription</CardTitle>
         </CardHeader>
@@ -320,7 +339,7 @@ function AccountPageContent() {
               <p className="text-sm text-muted-foreground">
                 You&apos;re on the Free plan. Upgrade to unlock more listings, compliance scans, vault storage, A/B testing, and more.
               </p>
-              <Button onClick={() => router.push("/pricing")} className="w-full sm:w-auto">
+              <Button onClick={() => router.push("/pricing")} className="w-full sm:w-auto transition-transform active:scale-[0.98]">
                 See plans
               </Button>
             </>
@@ -332,7 +351,7 @@ function AccountPageContent() {
               <Button
                 onClick={handleManageSubscription}
                 disabled={portalLoading}
-                className="w-full sm:w-auto flex items-center gap-2"
+                className="w-full sm:w-auto flex items-center gap-2 transition-transform active:scale-[0.98]"
               >
                 <CreditCard className="h-4 w-4" />
                 {portalLoading ? "Opening..." : "Manage subscription"}
@@ -342,19 +361,22 @@ function AccountPageContent() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className={cn(cardEnter, "transition-shadow hover:shadow-md")} style={{ animationDelay: "300ms" }}>
         <CardHeader>
           <CardTitle className="text-lg">Sign out</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+          <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2 transition-transform active:scale-[0.98]">
             <LogOut className="h-4 w-4" />
             Log out
           </Button>
         </CardContent>
       </Card>
 
-      <Card className="border-rose-500/30">
+      <Card
+        className={cn(cardEnter, "border-rose-500/30 transition-all hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-500/5")}
+        style={{ animationDelay: "360ms" }}
+      >
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2 text-rose-500">
             <AlertTriangle className="h-5 w-5" />
@@ -376,7 +398,7 @@ function AccountPageContent() {
           </ul>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full sm:w-auto">
+              <Button variant="destructive" className="w-full sm:w-auto transition-transform active:scale-[0.98]">
                 <AlertTriangle className="mr-2 h-4 w-4" />
                 Delete my account
               </Button>
@@ -426,11 +448,7 @@ function AccountPageContent() {
 
 export default function AccountPage() {
   return (
-    <Suspense fallback={
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center text-muted-foreground">
-        Loading account...
-      </div>
-    }>
+    <Suspense fallback={<AccountSkeleton />}>
       <AccountPageContent />
     </Suspense>
   )
