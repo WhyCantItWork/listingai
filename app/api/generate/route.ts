@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
     }).join("\n")
 
     const isMultiVariant = variantConfigs.length > 1
+    const isStudentLet = audience === "students"
 
     const prompt = `You are a UK lettings copywriter writing for Rightmove, Zoopla, and OnTheMarket. ${isMultiVariant ? `Write ${variantConfigs.length} DISTINCT polished property listing descriptions` : "Write ONE polished property listing description"} based on the property details below.
 
@@ -207,12 +208,14 @@ RULES
   – No mention of rent paid months in advance or large upfront payments — restricted.
   – No reference to fixed-term tenancies, "12-month contracts", or "Section 21" — tenancies are now indefinite periodic.
   – Avoid stating a "minimum term" — under the new Act, tenants can give 2 months' notice at any time.
+  – Do not reference rent review clauses. Rent rises only via the Section 13 process (Form 4A), once a year, 2 months' notice, at no more than open market rent.
 • No banned phrases under Tenant Fees Act 2019 (no admin/referencing fees mentioned).
 • No subjective safety claims like "safe area".
 • Do not write rent review clauses or any language allowing rent increases mid-tenancy outside the Section 13 process.
 • Do not write blanket "no pets" — phrase as "pets considered on application" if the landlord wants to retain discretion.
 • Do not promise quick possession for arrears — the mandatory threshold is 3 months with 4 weeks' notice.
 • Do not imply landlord can recover the property at short notice — Grounds 1 and 1A require 4 months' notice and cannot be used in the first 12 months.
+${isStudentLet ? `• STUDENT LET: This is aimed at students. Do NOT describe it as a "fixed academic-year tenancy", "12-month student contract", or "September to June let" as if the term is guaranteed — all tenancies are now periodic. You may mention it suits students and is close to the university, but the tenancy itself is rolling. (Landlords can recover student HMOs at the end of the academic year via possession Ground 4A, but only with prior written notice and 4 months' notice — do not state or imply a guaranteed end date in the advert.)` : ""}
 • No clichés: stunning, masterpiece, nestled, must-see, paradise, etc.
 ${isMultiVariant ? `\nSEPARATOR: Between versions, output a single line that is exactly:\n---VARIANT---\n\nDo not output the separator before the first version or after the last version.` : ""}
 `
