@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { CheckerDemo } from "@/components/checker-demo"
 import { Button } from "@/components/ui/button"
+import { ABDemo } from "@/components/ab-demo"
 
 const features = [
   {
@@ -170,9 +171,15 @@ export default function LandingPage() {
             <div className="tenancy-rise tenancy-rise-4 mt-12">
               <CheckerDemo />
             </div>
+
+            {/* Live A/B demo */}
+            <div className="tenancy-rise tenancy-rise-4 mt-6">
+              <ABDemo />
+            </div>
           </div>
         </div>
       </section>
+
 
       {/* Features */}
       <section className="border-t border-border bg-secondary/30 py-20 sm:py-28">
