@@ -13,7 +13,7 @@ import {
   ScrollText,
   ScanLine,
 } from "lucide-react"
-
+import { CheckerDemo } from "@/components/checker-demo"
 import { Button } from "@/components/ui/button"
 
 const features = [
@@ -151,7 +151,6 @@ export default function LandingPage() {
               </Button>
             </div>
 
-
             <div className="tenancy-rise tenancy-rise-4 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -165,6 +164,11 @@ export default function LandingPage() {
                 <CheckCircle2 className="h-4 w-4 text-primary" />
                 Cancel anytime
               </span>
+            </div>
+
+            {/* Live checker demo */}
+            <div className="tenancy-rise tenancy-rise-4 mt-12">
+              <CheckerDemo />
             </div>
           </div>
         </div>
