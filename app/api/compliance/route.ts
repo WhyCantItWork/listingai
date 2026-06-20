@@ -25,20 +25,15 @@ export async function POST(request: NextRequest) {
     }
 
 const COMPLIANCE_LIMITS: Record<string, number | null> = {
-  free: 0,
+  free: 5,
   pro: 75,
   lister: null, // unlimited
 }
 
-// Free (or any unknown tier) has no access. Lister = null = unlimited.
-if (profile.tier === "free" || !(profile.tier in COMPLIANCE_LIMITS)) {
-  return NextResponse.json(
-    { error: "Compliance Checker requires Pro (75/month) or Lister (unlimited). Upgrade to unlock." },
-    { status: 403 }
-  )
-}
-
-const complianceLimit = COMPLIANCE_LIMITS[profile.tier]
+// Any unknown tier is treated as free. Lister = null = unlimited.
+const complianceLimit = profile.tier in COMPLIANCE_LIMITS
+  ? COMPLIANCE_LIMITS[profile.tier]
+  : 5
 
 
     const resetAt = profile.compliance_reset_at ? new Date(profile.compliance_reset_at) : new Date()
@@ -56,7 +51,9 @@ const complianceLimit = COMPLIANCE_LIMITS[profile.tier]
       return NextResponse.json(
         {
           error: "limit_reached",
-          message: `You've used your ${complianceLimit} compliance scans this month. Upgrade to Lister for unlimited scans, or wait until your monthly reset.`,
+          message: profile.tier === "free"
+            ? `You've used your ${complianceLimit} free compliance scans this month. Upgrade to Pro for 75/month, or wait until your monthly reset.`
+            : `You've used your ${complianceLimit} compliance scans this month. Upgrade to Lister for unlimited scans, or wait until your monthly reset.`,
           used: complianceUsed,
           limit: complianceLimit,
         },
