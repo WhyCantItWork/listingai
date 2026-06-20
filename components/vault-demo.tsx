@@ -15,22 +15,24 @@ export function VaultDemo() {
 
   useEffect(() => {
     let active = true
-    const tick = () => {
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    const cycle = () => {
       if (!active) return
-      setShown((n) => {
-        if (n >= listings.length) {
-          // hold full grid, then reset
-          setTimeout(() => active && setShown(0), 2200)
-          return n
-        }
-        setTimeout(tick, 500)
-        return n + 1
+      setShown(0)
+      // reveal one card at a time
+      listings.forEach((_, i) => {
+        timers.push(setTimeout(() => active && setShown(i + 1), 400 + i * 500))
       })
+      // hold the full grid, then restart the whole cycle
+      const total = 400 + listings.length * 500 + 2200
+      timers.push(setTimeout(cycle, total))
     }
-    const start = setTimeout(tick, 400)
+
+    cycle()
     return () => {
       active = false
-      clearTimeout(start)
+      timers.forEach(clearTimeout)
     }
   }, [])
 
