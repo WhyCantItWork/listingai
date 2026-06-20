@@ -16,6 +16,7 @@ import {
 import { CheckerDemo } from "@/components/checker-demo"
 import { Button } from "@/components/ui/button"
 import { ABDemo } from "@/components/ab-demo"
+import { VaultDemo } from "@/components/vault-demo"
 
 const features = [
   {
@@ -175,6 +176,10 @@ export default function LandingPage() {
             {/* Live A/B demo */}
             <div className="tenancy-rise tenancy-rise-4 mt-6">
               <ABDemo />
+            </div>
+                        {/* Live vault demo */}
+            <div className="tenancy-rise tenancy-rise-4 mt-6">
+              <VaultDemo />
             </div>
           </div>
         </div>
