@@ -21,14 +21,23 @@ export function FreeCheckClient() {
   const [findings, setFindings] = useState<Finding[] | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [tier, setTier] = useState<string | null>(null) // null = logged out
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsLoggedIn(!!user)
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) {
+        setTier(null)
+        return
+      }
+      const { data } = await supabase.from("profiles").select("tier").eq("id", user.id).single()
+      setTier(data?.tier ?? "free")
     })
   }, [])
+
+  const isLoggedIn = tier !== null
+  const isPaid = tier === "pro" || tier === "lister"
+  const isFree = tier === "free"
 
   const runCheck = async () => {
     if (text.trim().length < 20) {
@@ -93,11 +102,11 @@ export function FreeCheckClient() {
           </p>
         </div>
 
-        {/* Logged-in banner — point them to the real tool */}
-        {isLoggedIn && (
+        {/* Paid users: nudge to the full tool */}
+        {isPaid && (
           <div className="tenancy-rise mt-8 flex flex-col items-center gap-3 rounded-lg border border-primary/40 bg-primary/5 p-4 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-sm text-foreground">
-              <span className="font-semibold">You&apos;re signed in.</span> Use the full Compliance Checker for one-click fixes and unlimited scans.
+              <span className="font-semibold">You&apos;re on a paid plan.</span> Use the full Compliance Checker for one-click fixes and unlimited scans.
             </p>
             <Button asChild size="sm" className="shrink-0">
               <Link href="/compliance">
@@ -163,11 +172,14 @@ export function FreeCheckClient() {
               </div>
               <p className="text-lg font-semibold text-foreground">No obvious breaches found</p>
               <p className="max-w-sm text-sm text-muted-foreground">
-                This advert looks clean on the common red flags. For a deeper scan with auto-fixes, full Material Information checks, and unlimited listings, {isLoggedIn ? "use the full Compliance Checker." : "create a free account."}
+                This advert looks clean on the common red flags. For a deeper scan with one-click fixes and full Material Information checks,{" "}
+                {isPaid ? "use the full Compliance Checker." : isFree ? "upgrade to Pro." : "create a free account."}
               </p>
               <Button asChild className="mt-2">
-                {isLoggedIn ? (
+                {isPaid ? (
                   <Link href="/compliance">Open full Checker <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                ) : isFree ? (
+                  <Link href="/pricing">Upgrade to Pro <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 ) : (
                   <Link href="/auth/signup">Create free account <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 )}
@@ -207,8 +219,8 @@ export function FreeCheckClient() {
                   <p className="text-sm font-medium text-foreground">&ldquo;{f.phrase}&rdquo;</p>
                   <p className="text-sm text-muted-foreground">{f.reason}</p>
 
-                  {/* Fix area — gated for logged-out, link to full tool for logged-in */}
-                  {isLoggedIn ? (
+                  {/* Fix area */}
+                  {isPaid ? (
                     <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-center text-xs text-primary">
                       Open the{" "}
                       <Link href="/compliance" className="font-semibold underline">
@@ -224,7 +236,7 @@ export function FreeCheckClient() {
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs font-medium text-primary">
                         <Lock className="h-3.5 w-3.5" />
-                        Sign up free to reveal the fix
+                        {isFree ? "Upgrade to Pro for one-click fixes" : "Sign up free to reveal the fix"}
                       </div>
                     </div>
                   )}
@@ -232,8 +244,8 @@ export function FreeCheckClient() {
               </Card>
             ))}
 
-            {/* Conversion card — only for logged-out visitors */}
-            {!isLoggedIn && (
+            {/* Conversion card — strangers and free users only */}
+            {!isPaid && (
               <Card className="border-2 border-primary bg-primary/5 animate-[tenancy-pop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]">
                 <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -241,12 +253,20 @@ export function FreeCheckClient() {
                   </div>
                   <h3 className="text-xl font-bold text-foreground">Fix every issue in one click</h3>
                   <p className="max-w-md text-sm text-muted-foreground">
-                    Create a free Tenancy account to reveal a safe, drop-in replacement for each flagged phrase — plus generate fully compliant listings and Material Information packs from scratch.
+                    {isFree
+                      ? "Upgrade to Pro to unlock the full Compliance Checker — a safe, drop-in replacement for every flagged phrase, plus 75 scans a month."
+                      : "Create a free Tenancy account to scan adverts, then upgrade to Pro to reveal a safe, drop-in replacement for each flagged phrase."}
                   </p>
                   <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                    <Button asChild size="lg" className="transition-transform active:scale-[0.98]">
-                      <Link href="/auth/signup">Sign up free <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                    </Button>
+                    {isFree ? (
+                      <Button asChild size="lg" className="transition-transform active:scale-[0.98]">
+                        <Link href="/pricing">Upgrade to Pro <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                      </Button>
+                    ) : (
+                      <Button asChild size="lg" className="transition-transform active:scale-[0.98]">
+                        <Link href="/auth/signup">Sign up free <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                      </Button>
+                    )}
                     <Button asChild size="lg" variant="outline">
                       <Link href="/pricing">See plans</Link>
                     </Button>
