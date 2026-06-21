@@ -174,6 +174,7 @@ interface FormData {
   billsIncluded: string[]
   petsPolicy: string
   smokingAllowed: boolean
+  useEmojis: boolean
   tone: string
   keywords: string
   length: string
@@ -245,6 +246,7 @@ export default function GeneratorPage() {
     billsIncluded: [],
     petsPolicy: "case-by-case",
     smokingAllowed: false,
+    useEmojis: false,
     tone: "professional",
     keywords: "",
     length: "medium",
@@ -1001,6 +1003,17 @@ export default function GeneratorPage() {
                   </SelectContent>
                 </Select>
               </div>
+                            <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="useEmojis"
+                  checked={formData.useEmojis}
+                  onCheckedChange={(checked) => setFormData((p) => ({ ...p, useEmojis: checked === true }))}
+                />
+                <Label htmlFor="useEmojis" className="text-sm font-normal">
+                  Add emojis to highlight features
+                </Label>
+              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="length" className="flex items-center gap-2">

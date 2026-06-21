@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const useEmojis = body.useEmojis === true
     const propertyName = propertyTypeNames[body.propertyType] || body.propertyType || "property"
 
     const hasProFeatures = profile.tier !== "free"
@@ -201,6 +202,11 @@ TENANCY TERMS
 
 RULES
 • Sound human, never templated. British English throughout.
+• Output plain text only. Do NOT use any markdown formatting — no asterisks, no bold, no underscores, no markdown headers. The section headers (DESCRIPTION, KEY FEATURES, etc.) should be plain uppercase text on their own line. This will be pasted directly into property portals, which do not render markdown.
+• Only describe features explicitly provided in the property details above. NEVER invent amenities, rooms, gardens, or features that were not listed in the input.
+${useEmojis
+  ? "• You may use a few tasteful emojis to highlight key features (e.g. one before a feature line). Keep it professional — no more than one per line, and none in the main description paragraph."
+  : "• Do NOT use any emojis anywhere in the output."}
 • Comply with Equality Act 2010 — no preferences for nationality, family makeup, age, religion, etc.
 • Comply with the Renters' Rights Act 2025 (now in force, since 1 May 2026):
   – No language banning or discouraging children, families, or benefit recipients (now explicitly illegal).
