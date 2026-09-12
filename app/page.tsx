@@ -1,297 +1,157 @@
-"use client"
-
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
-import {
-  Sparkles,
-  FileCheck,
-  Shield,
-  Download,
-  ArrowRight,
-  CheckCircle2,
-  Zap,
-  ScrollText,
-  ScanLine,
-} from "lucide-react"
-import { CheckerDemo } from "@/components/checker-demo"
+import { ArrowRight, FileCheck, ScanLine, Download, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ABDemo } from "@/components/ab-demo"
-import { VaultDemo } from "@/components/vault-demo"
 
 const features = [
   {
     icon: FileCheck,
-    title: "Material Information ready",
-    description:
-      "Generates Parts A, B, and C-compliant listings out of the box. Filled-in, formatted, ready to paste into Rightmove or Zoopla.",
+    title: "Start with a listing draft",
+    description: "Turn the property details you provide into a description you can edit. Verify every detail before publishing.",
   },
   {
-    icon: Shield,
-    title: "UK lettings compliance",
-    description:
-      "Scans for Right to Rent, deposit caps, DSS-discrimination, and Renters' Rights Act language. Catches risks before they cost you a fine.",
+    icon: ScanLine,
+    title: "Review advert wording",
+    description: "Use the free checker to flag wording for further review. Its suggestions are a starting point, not a legal verdict.",
   },
   {
     icon: Download,
-    title: "Full tenancy pack PDF",
-    description:
-      "One-click export of the listing, the MI table, and a clean cover sheet. Send to landlords or attach to portals in seconds.",
-  },
-  {
-    icon: ScrollText,
-    title: "Built for the Renters' Rights Act",
-    description:
-      "Indefinite periodic tenancies, the rental bidding ban, rent-in-advance limits, and pet-request rules — all baked into every listing.",
+    title: "Organise listing information",
+    description: "Prepare Material Information tables and listing PDFs for review. These are not a tenancy agreement or a complete set of legal documents.",
   },
 ]
 
-const stats = [
-  { value: "Parts A·B·C", label: "Material Information covered" },
-  { value: "60s", label: "From details to listing" },
-  { value: "RRA 2025", label: "Renters' Rights Act — built in" },
-  { value: "UK only", label: "British lettings, not retrofitted" },
+const steps = [
+  { title: "Add your property details", description: "Start with facts you have verified. Do not include tenant personal information." },
+  { title: "Review the draft", description: "Check the description, fill in missing information and make it sound like your agency." },
+  { title: "Publish when you are ready", description: "Confirm the applicable requirements and portal fields, then use your usual publishing process." },
 ]
-
-function Reveal({
-  children,
-  delay = 0,
-  className = "",
-}: {
-  children: React.ReactNode
-  delay?: number
-  className?: string
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [shown, setShown] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShown(true)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.15 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-700 ease-out ${
-        shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-      } ${className}`}
-    >
-      {children}
-    </div>
-  )
-}
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col overflow-hidden">
-      {/* Hero */}
-      <section className="relative isolate">
-        {/* Animated gradient backdrop */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-          style={{
-            background:
-              "radial-gradient(60% 60% at 20% 20%, var(--color-primary) 0%, transparent 60%), radial-gradient(50% 50% at 80% 30%, color-mix(in oklch, var(--color-primary) 60%, transparent) 0%, transparent 55%)",
-            backgroundSize: "200% 200%",
-            animation: "tenancy-drift 18s ease-in-out infinite",
-            filter: "blur(60px)",
-          }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,transparent,var(--color-background))]"
-        />
-
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
+      <section className="relative isolate bg-gradient-to-b from-primary/10 to-background">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="tenancy-rise mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span>Built for UK letting agents</span>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-4 py-1.5 text-sm text-muted-foreground">
+              <Sparkles aria-hidden="true" className="h-4 w-4 text-primary" />
+              Built for UK letting agents
             </div>
-
-            <h1 className="tenancy-rise tenancy-rise-1 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Material Information–ready listings,{" "}
-              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                in 60 seconds
-              </span>
+            <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              Property details in.{" "}
+              <span className="text-primary">A listing draft out.</span>
             </h1>
-
-            <p className="tenancy-rise tenancy-rise-2 mt-6 text-pretty text-lg text-muted-foreground sm:text-xl">
-              Tenancy generates compliant property descriptions, Material
-              Information tables, and tenancy packs for UK letting agents. Built
-              for Rightmove, Zoopla, and OnTheMarket — out of the box.
+            <p className="mt-6 text-pretty text-lg text-muted-foreground sm:text-xl">
+              Tenancy helps you write rental descriptions, organise Material Information
+              and review advert wording. Start with a draft, not a blank page.
             </p>
-
-            <div className="tenancy-rise tenancy-rise-3 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg" className="group w-full sm:w-auto">
-                <Link href="/generator">
-                  Generate a listing
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="group w-full sm:w-auto">
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link href="/free-check">
-                  <ScanLine className="mr-2 h-4 w-4" />
+                  <ScanLine aria-hidden="true" className="mr-2 h-4 w-4" />
                   Check my advert free
                 </Link>
               </Button>
-              <Button asChild variant="ghost" size="lg" className="w-full sm:w-auto">
-                <Link href="/pricing">View pricing</Link>
-              </Button>
-            </div>
-
-            <div className="tenancy-rise tenancy-rise-4 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                No credit card required
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                5 free listings per month
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                Cancel anytime
-              </span>
-            </div>
-
-            {/* Live checker demo */}
-            <div className="tenancy-rise tenancy-rise-4 mt-12">
-              <CheckerDemo />
-            </div>
-
-            {/* Live A/B demo */}
-            <div className="tenancy-rise tenancy-rise-4 mt-6">
-              <ABDemo />
-            </div>
-                        {/* Live vault demo */}
-            <div className="tenancy-rise tenancy-rise-4 mt-6">
-              <VaultDemo />
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* Features */}
-      <section className="border-t border-border bg-secondary/30 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Everything UK letting agents actually need
-            </h2>
-            <p className="mt-4 text-pretty text-lg text-muted-foreground">
-              Material Information, tenancy packs, and lettings-specific
-              compliance — all in one place.
-            </p>
-          </Reveal>
-
-          <div className="mx-auto mt-16 grid max-w-5xl gap-6 sm:grid-cols-2">
-            {features.map((feature, i) => (
-              <Reveal key={feature.title} delay={i * 100}>
-                <div className="group h-full rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-                    <feature.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-2 text-base text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="border-t border-border py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Built for British lettings — not retrofitted from a US sales tool
-            </h2>
-            <p className="mt-4 text-pretty text-lg text-muted-foreground">
-              British English, GBP, UK property terms (flat, garden, leasehold),
-              and the actual legal framework that applies here.
-            </p>
-          </Reveal>
-
-          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-8 lg:grid-cols-4">
-            {stats.map((stat, i) => (
-              <Reveal key={stat.label} delay={i * 100} className="text-center">
-                <div className="text-3xl font-bold text-primary sm:text-4xl">
-                  {stat.value}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  {stat.label}
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="relative isolate overflow-hidden border-t border-border py-20 sm:py-28">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-primary"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 opacity-40"
-          style={{
-            background:
-              "radial-gradient(50% 80% at 50% 0%, color-mix(in oklch, white 30%, transparent) 0%, transparent 70%)",
-            backgroundSize: "200% 200%",
-            animation: "tenancy-drift 14s ease-in-out infinite",
-          }}
-        />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <div className="mb-6 inline-flex items-center justify-center rounded-full bg-primary-foreground/10 p-3">
-              <Zap className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h2 className="text-balance text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
-              Stop dreading Material Information.
-            </h2>
-            <p className="mt-4 text-pretty text-lg text-primary-foreground/80">
-              Generate your first compliant tenancy listing in 60 seconds. Free
-              to try.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg" variant="secondary" className="group w-full sm:w-auto">
+              <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
                 <Link href="/generator">
-                  Try it free
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  Draft a listing
+                  <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="w-full border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
-              >
-                <Link href="/pricing">See all plans</Link>
-              </Button>
             </div>
-          </Reveal>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Free advert check: no sign-up required. Listing generation uses an account.
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              <Link href="/pricing" className="font-medium underline underline-offset-4">Compare plans and limits</Link>
+            </p>
+          </div>
+
+          <div className="mx-auto mt-14 max-w-5xl rounded-2xl border border-border bg-card p-6 sm:p-8">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-foreground">What a listing draft can look like</h2>
+              <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">Illustrative example, not a customer result</span>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-xl bg-secondary/50 p-5">
+                <h3 className="text-sm font-semibold text-foreground">Property notes</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  2-bed flat. Leeds. £1,100 pcm. Unfurnished. Separate kitchen.
+                  Balcony. Available 1 November 2026.
+                </p>
+              </div>
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+                <h3 className="text-sm font-semibold text-foreground">Illustrative draft</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  An unfurnished two-bedroom flat in Leeds, available from 1 November 2026
+                  at £1,100 per calendar month. The property includes a separate kitchen
+                  and a balcony.
+                </p>
+              </div>
+            </div>
+            <p className="mt-5 text-sm text-muted-foreground">
+              Description only, not a complete advert. Confirm missing details and all
+              required disclosures before publication. Actual output will vary.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-secondary/30 py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center text-3xl font-bold tracking-tight text-foreground">From property notes to your review</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">Writing assistance for your existing lettings workflow. You stay responsible for the final advert.</p>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {features.map((feature) => (
+              <article key={feature.title} className="rounded-2xl border border-border bg-card p-6">
+                <feature.icon aria-hidden="true" className="mb-4 h-7 w-7 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center text-3xl font-bold tracking-tight text-foreground">How it works</h2>
+          <ol className="mt-10 grid gap-8 md:grid-cols-3">
+            {steps.map((step, index) => (
+              <li key={step.title}>
+                <span className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">{index + 1}</span>
+                <h3 className="text-lg font-semibold text-foreground">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+              </li>
+            ))}
+          </ol>
+          <aside className="mt-10 rounded-xl border border-border bg-secondary/30 p-6">
+            <h3 className="font-semibold text-foreground">AI assistance, not a compliance guarantee</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Tenancy can make mistakes and miss information. It does not verify property
+              facts, certify legal compliance or replace professional advice. Requirements
+              differ across England, Wales, Scotland and Northern Ireland and can change.
+              Check current official guidance and obtain qualified advice where needed.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-primary/5 py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Try it on one advert.</h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Start with the free wording check. Then tell us what was useful,
+            what it missed, or what would make Tenancy fit your agency.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">Use public advert text only. Remove personal or confidential information.</p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link href="/free-check">Check my advert free<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+              <a href="mailto:vr047836@gmail.com?subject=Tenancy%20feedback">Send feedback</a>
+            </Button>
+          </div>
         </div>
       </section>
     </div>
