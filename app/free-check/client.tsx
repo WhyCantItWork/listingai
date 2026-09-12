@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Shield, AlertTriangle, Check, Loader2, Sparkles, Lock, ArrowRight, ScanLine } from "lucide-react"
+import { AlertTriangle, ArrowRight, Loader2, ScanLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 
 interface Finding {
@@ -16,34 +15,42 @@ interface Finding {
   reason: string
 }
 
+function isFinding(value: unknown): value is Finding {
+  if (typeof value !== "object" || value === null) return false
+  const item = value as Record<string, unknown>
+  return typeof item.phrase === "string" && typeof item.category === "string" &&
+    typeof item.reason === "string" &&
+    (item.severity === "high" || item.severity === "medium" || item.severity === "low")
+}
+
 export function FreeCheckClient() {
   const [text, setText] = useState("")
   const [findings, setFindings] = useState<Finding[] | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tier, setTier] = useState<string | null>(null) // null = logged out
+  const [tier, setTier] = useState<string | null>(null)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) {
-        setTier(null)
-        return
+    let active = true
+    async function loadTier() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase.from("profiles").select("tier").eq("id", user.id).single()
+        if (active) setTier(data?.tier ?? "free")
+      } catch {
+        // The public checker remains usable if account details cannot load.
       }
-      const { data } = await supabase.from("profiles").select("tier").eq("id", user.id).single()
-      setTier(data?.tier ?? "free")
-    })
+    }
+    void loadTier()
+    return () => { active = false }
   }, [])
 
-  const isLoggedIn = tier !== null
   const isPaid = tier === "pro" || tier === "lister"
-  const isFree = tier === "free"
 
-  const runCheck = async () => {
-    if (text.trim().length < 20) {
-      setError("Paste at least a sentence to scan.")
-      return
-    }
+  async function runCheck() {
+    if (scanning || text.trim().length < 20 || text.length > 4000) return
     setScanning(true)
     setError(null)
     setFindings(null)
@@ -54,236 +61,93 @@ export function FreeCheckClient() {
         body: JSON.stringify({ text }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.message || data.error || "Failed to run check")
-      setFindings(data.findings || [])
+      if (!res.ok) throw new Error(data.message || data.error || "The check could not finish. Please try again.")
+      if (!Array.isArray(data.findings) || !data.findings.every(isFinding)) {
+        throw new Error("The checker returned an unexpected result. Please try again; no conclusion was reached.")
+      }
+      setFindings(data.findings)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error")
+      setError(err instanceof Error ? err.message : "The check could not finish. Please try again.")
     } finally {
       setScanning(false)
     }
   }
 
-  const severityColor = (s: Finding["severity"]) => {
-    if (s === "high") return "border-rose-500/50 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-    if (s === "medium") return "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-    return "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-  }
-
   return (
-    <div className="relative isolate overflow-hidden">
-      {/* Animated gradient backdrop */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 opacity-60"
-        style={{
-          background:
-            "radial-gradient(55% 55% at 25% 15%, var(--color-primary) 0%, transparent 60%), radial-gradient(45% 45% at 80% 10%, color-mix(in oklch, var(--color-primary) 50%, transparent) 0%, transparent 55%)",
-          backgroundSize: "200% 200%",
-          animation: "tenancy-drift 18s ease-in-out infinite",
-          filter: "blur(70px)",
-        }}
-      />
-
+    <div className="bg-gradient-to-b from-primary/10 to-background">
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-        {/* Hero */}
-        <div className="text-center">
-          <div className="tenancy-rise mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Free · No sign-up · Updated for the Renters&apos; Rights Act 2025
-          </div>
-          <h1 className="tenancy-rise tenancy-rise-1 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Is your rental advert{" "}
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              still legal?
-            </span>
-          </h1>
-          <p className="tenancy-rise tenancy-rise-2 mx-auto mt-5 max-w-xl text-pretty text-lg text-muted-foreground">
-            Paste any UK rental listing below. Tenancy instantly flags the phrases that now breach the Renters&apos; Rights Act, Equality Act, and Tenant Fees Act — before they cost you a fine.
-          </p>
-        </div>
+        <header className="text-center">
+          <p className="mb-4 text-sm font-medium text-primary">Free wording check - no sign-up required to start</p>
+          <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Give your rental advert a second look.</h1>
+          <p className="mt-5 text-lg text-muted-foreground">Paste your advert to flag wording that may need review. This is AI assistance, not a decision about whether your advert is legal.</p>
+        </header>
 
-        {/* Paid users: nudge to the full tool */}
-        {isPaid && (
-          <div className="tenancy-rise mt-8 flex flex-col items-center gap-3 rounded-lg border border-primary/40 bg-primary/5 p-4 text-center sm:flex-row sm:justify-between sm:text-left">
-            <p className="text-sm text-foreground">
-              <span className="font-semibold">You&apos;re on a paid plan.</span> Use the full Compliance Checker for one-click fixes and unlimited scans.
-            </p>
-            <Button asChild size="sm" className="shrink-0">
-              <Link href="/compliance">
-                Open full Checker <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        )}
+        <aside className="mt-8 rounded-xl border border-border bg-secondary/40 p-4 text-sm text-muted-foreground">
+          <p><strong className="text-foreground">Before you paste:</strong> use public advert text only. Remove tenant names, contact details and confidential information. Submitted text is processed by an AI service.</p>
+          <p className="mt-2">Requirements depend on the property location, tenancy type and current law. Verify suggestions before acting on them.</p>
+          <Link href="/privacy" className="mt-2 inline-block underline underline-offset-4">Privacy policy</Link>
+        </aside>
 
-        {/* Scanner */}
-        <Card className="tenancy-rise tenancy-rise-3 mt-10 border-border bg-card/80 backdrop-blur">
-          <CardContent className="p-5 space-y-4">
+        <Card className="mt-6 border-border bg-card">
+          <CardContent className="space-y-4 p-5">
+            <label htmlFor="rental-advert" className="block text-sm font-semibold text-foreground">Rental advert text</label>
             <Textarea
-              placeholder="Paste your property advert here…"
+              id="rental-advert"
+              placeholder="Paste the public wording of your rental advert here..."
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              disabled={scanning}
+              onChange={(event) => { setText(event.target.value); setFindings(null); setError(null) }}
               rows={9}
-              className="resize-none text-sm transition-colors focus-visible:border-primary"
+              aria-describedby="advert-length checker-limits"
+              className="text-sm"
             />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{text.length} / 4000 characters</span>
-              {text.length > 4000 && <span className="text-rose-500">Too long for the free checker</span>}
-            </div>
-            <Button
-              onClick={runCheck}
-              disabled={scanning || text.trim().length < 20 || text.length > 4000}
-              size="lg"
-              className="w-full transition-transform active:scale-[0.98]"
-            >
-              {scanning ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning your advert…</>
-              ) : (
-                <><ScanLine className="mr-2 h-4 w-4" /> Check my advert free</>
-              )}
+            <p id="advert-length" className="text-xs text-muted-foreground">
+              {text.length} / 4,000 characters. At least 20 characters required.
+              {text.length > 4000 && " Please shorten the text to continue."}
+            </p>
+            <Button onClick={runCheck} disabled={scanning || text.trim().length < 20 || text.length > 4000} size="lg" className="w-full">
+              {scanning ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine aria-hidden="true" className="mr-2 h-4 w-4" />}
+              {scanning ? "Reviewing your advert..." : "Check my advert free"}
             </Button>
-            {error && (
-              <p className="rounded-md border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-500 animate-[tenancy-rise_0.3s_ease-out]">
-                {error}
-              </p>
-            )}
+            <p id="checker-limits" className="text-xs text-muted-foreground">Usage limits apply. This free check flags wording; suggested rewrites require an eligible paid plan. <Link href="/pricing" className="underline">Compare plans</Link>.</p>
+            {error && <p role="alert" className="rounded-md border border-destructive/30 p-3 text-sm text-destructive">{error}</p>}
           </CardContent>
         </Card>
 
-        {/* Scanning skeleton */}
-        {scanning && (
-          <div className="mt-6 space-y-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="rounded-lg border border-border bg-card/60 p-4 space-y-2">
-                <div className="tenancy-shimmer h-4 w-28 rounded-full" />
-                <div className="tenancy-shimmer h-4 w-3/4 rounded" />
-                <div className="tenancy-shimmer h-3 w-1/2 rounded" />
+        <section aria-live="polite" aria-busy={scanning} className="mt-6 space-y-4">
+          {scanning && <p role="status" className="text-sm text-muted-foreground">Checking the wording. Results will appear here.</p>}
+          {findings !== null && !scanning && (
+            <>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="text-lg font-semibold text-foreground">{findings.length === 0 ? "No wording was flagged by this check" : `${findings.length} item${findings.length === 1 ? "" : "s"} to review`}</h2>
+                <p className="mt-2 text-sm text-muted-foreground">This does not confirm legal compliance or completeness. The checker can miss issues or flag acceptable wording. Treat explanations and priority labels as AI suggestions, not legal findings.</p>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* All clear */}
-        {findings !== null && findings.length === 0 && !scanning && (
-          <Card className="mt-6 border-green-500/40 bg-green-500/5 animate-[tenancy-pop_0.45s_cubic-bezier(0.34,1.56,0.64,1)]">
-            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-                <Check className="h-8 w-8 text-green-500" />
+              {findings.map((finding, index) => (
+                <Card key={`${index}-${finding.phrase}`} className="border-border bg-card">
+                  <CardContent className="space-y-3 p-5">
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                      <AlertTriangle aria-hidden="true" className="h-4 w-4 text-amber-500" />
+                      <h3>{finding.category}</h3>
+                      <span className="text-xs text-muted-foreground">AI review priority: {finding.severity}</span>
+                    </div>
+                    <blockquote className="border-l-2 border-primary/40 pl-3 text-sm text-foreground">{finding.phrase}</blockquote>
+                    <p className="text-sm text-muted-foreground">{finding.reason}</p>
+                  </CardContent>
+                </Card>
+              ))}
+              <div className="rounded-xl border border-border bg-secondary/30 p-5">
+                <h3 className="font-semibold text-foreground">{isPaid ? "Continue your review" : "Need help rewriting?"}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{isPaid ? "Use the full checker for suggested edits. Verify the wording before publishing." : "The free check flags wording. Review paid plans for suggested edits; creating a free account alone does not unlock them."}</p>
+                <Button asChild className="mt-4">
+                  <Link href={isPaid ? "/compliance" : "/pricing"}>{isPaid ? "Open full checker" : "Compare paid plans"}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link>
+                </Button>
               </div>
-              <p className="text-lg font-semibold text-foreground">No obvious breaches found</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                This advert looks clean on the common red flags. For a deeper scan with one-click fixes and full Material Information checks,{" "}
-                {isPaid ? "use the full Compliance Checker." : isFree ? "upgrade to Pro." : "create a free account."}
-              </p>
-              <Button asChild className="mt-2">
-                {isPaid ? (
-                  <Link href="/compliance">Open full Checker <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                ) : isFree ? (
-                  <Link href="/pricing">Upgrade to Pro <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                ) : (
-                  <Link href="/auth/signup">Create free account <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+              <p className="text-sm text-muted-foreground">Was this useful, confusing or incorrect? <a href="mailto:vr047836@gmail.com?subject=Tenancy%20checker%20feedback" className="underline">Send feedback</a>. Do not send confidential information.</p>
+            </>
+          )}
+        </section>
 
-        {/* Findings */}
-        {findings !== null && findings.length > 0 && !scanning && (
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center gap-2 animate-[tenancy-rise_0.4s_ease-out]">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <h2 className="text-lg font-semibold text-foreground">
-                {findings.length} issue{findings.length !== 1 ? "s" : ""} found
-              </h2>
-            </div>
-
-            {findings.map((f, i) => (
-              <Card
-                key={i}
-                style={{ animationDelay: `${i * 70}ms` }}
-                className="border-border bg-card opacity-0 animate-[tenancy-rise_0.4s_ease-out_forwards]"
-              >
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={cn("rounded-full border px-2.5 py-0.5 text-xs font-medium", severityColor(f.severity))}>
-                      {f.category}
-                    </span>
-                    <span className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider",
-                      f.severity === "high" ? "text-rose-500" : f.severity === "medium" ? "text-amber-500" : "text-blue-500"
-                    )}>
-                      {f.severity} risk
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-foreground">&ldquo;{f.phrase}&rdquo;</p>
-                  <p className="text-sm text-muted-foreground">{f.reason}</p>
-
-                  {/* Fix area */}
-                  {isPaid ? (
-                    <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-center text-xs text-primary">
-                      Open the{" "}
-                      <Link href="/compliance" className="font-semibold underline">
-                        full Compliance Checker
-                      </Link>{" "}
-                      to get a one-click fix for this.
-                    </div>
-                  ) : (
-                    <div className="relative overflow-hidden rounded-md border border-dashed border-primary/40 bg-primary/5 p-3">
-                      <div className="select-none blur-[5px]" aria-hidden>
-                        <p className="text-xs font-semibold text-primary">Suggested compliant replacement</p>
-                        <p className="text-sm text-foreground">Replace with safe, RRA-compliant wording that keeps the listing strong.</p>
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs font-medium text-primary">
-                        <Lock className="h-3.5 w-3.5" />
-                        {isFree ? "Upgrade to Pro for one-click fixes" : "Sign up free to reveal the fix"}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Conversion card — strangers and free users only */}
-            {!isPaid && (
-              <Card className="border-2 border-primary bg-primary/5 animate-[tenancy-pop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]">
-                <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <Shield className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground">Fix every issue in one click</h3>
-                  <p className="max-w-md text-sm text-muted-foreground">
-                    {isFree
-                      ? "Upgrade to Pro to unlock the full Compliance Checker — a safe, drop-in replacement for every flagged phrase, plus 75 scans a month."
-                      : "Create a free Tenancy account to scan adverts, then upgrade to Pro to reveal a safe, drop-in replacement for each flagged phrase."}
-                  </p>
-                  <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                    {isFree ? (
-                      <Button asChild size="lg" className="transition-transform active:scale-[0.98]">
-                        <Link href="/pricing">Upgrade to Pro <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                      </Button>
-                    ) : (
-                      <Button asChild size="lg" className="transition-transform active:scale-[0.98]">
-                        <Link href="/auth/signup">Sign up free <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                      </Button>
-                    )}
-                    <Button asChild size="lg" variant="outline">
-                      <Link href="/pricing">See plans</Link>
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">No credit card · 5 free listings/month</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* Trust footer */}
-        <p className="mt-10 text-center text-xs text-muted-foreground">
-          This free checker flags common breaches and is not legal advice. For complex cases, consult a solicitor, the{" "}
-          <a href="[nrla.org.uk](https://nrla.org.uk)" target="_blank" rel="noopener" className="underline">NRLA</a>, or{" "}
-          <a href="[gov.uk](https://gov.uk)" target="_blank" rel="noopener" className="underline">gov.uk</a>.
-        </p>
+        <p className="mt-10 text-center text-xs text-muted-foreground">Not legal advice. Consult a qualified professional where needed and check current official guidance for the relevant UK nation.</p>
       </div>
     </div>
   )
